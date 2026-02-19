@@ -79,9 +79,12 @@ planets:
         config = load_config(config_file)
         assert config.planets[0].env == {"NODE_ENV": "development", "DEBUG": "true"}
 
-    def test_missing_file_raises(self, tmp_path):
-        with pytest.raises(ConfigError, match="Config file not found"):
-            load_config(tmp_path / "nonexistent.yaml")
+    def test_missing_file_creates_template_and_raises(self, tmp_path):
+        config_file = tmp_path / "nonexistent.yaml"
+        with pytest.raises(ConfigError, match="add your planets and run again"):
+            load_config(config_file)
+        assert config_file.exists()
+        assert "planets:" in config_file.read_text()
 
     def test_invalid_yaml_raises(self, tmp_path):
         config_file = tmp_path / "config.yaml"

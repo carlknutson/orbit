@@ -16,11 +16,28 @@ class Config(BaseModel):
     planets: list[Planet]
 
 
+DEFAULT_CONFIG_TEMPLATE = """\
+# Orbit configuration
+# Add one entry per project (planet) you want to manage.
+
+planets:
+  # - name: myproject
+  #   path: ~/projects/myproject
+  #   worktree_base: ~/orbits/myproject
+  #   panes:
+  #     - name: server
+  #       command: npm run dev
+  #       ports: [3000]
+"""
+
+
 def load_config(path: Path | None = None) -> Config:
     config_path = (path or CONFIG_PATH).expanduser()
 
     if not config_path.exists():
-        raise ConfigError(f"Config file not found: {config_path}")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(DEFAULT_CONFIG_TEMPLATE)
+        raise ConfigError(f"Created {config_path} — add your planets and run again.")
 
     try:
         with open(config_path) as f:
