@@ -45,7 +45,7 @@ def load_config(path: Path | None = None) -> Config:
     except yaml.YAMLError as e:
         raise ConfigError(f"Failed to parse config: {e}") from e
 
-    if not data or "planets" not in data:
+    if not data or not data.get("planets"):
         raise ConfigError(f"No planets configured in {config_path}")
 
     try:
