@@ -2,8 +2,9 @@ from pathlib import Path
 
 import click
 
-from orbit.config import Config, ConfigError, load_config
+from orbit.config import Config, ConfigError, ConfigNotice, load_config
 from orbit.state import State, StateError, load_state
+from orbit.worktree import WorktreeError
 
 DEFAULT_CONFIG_PATH = Path("~/.orbit/config.yaml")
 DEFAULT_STATE_PATH = Path("~/.orbit/state.json")
@@ -20,17 +21,33 @@ def cli() -> None:
 def start(branch: str | None, name: str | None) -> None:
     """Create a new orbit for the current planet."""
     from orbit import session as session_module
+    from orbit.config import append_planet_to_config, detect_planet, scaffold_planet
 
+    cwd = Path.cwd()
     config = _load_config()
+
+    try:
+        detect_planet(cwd, config)
+    except ConfigError:
+        planet = scaffold_planet(cwd)
+        append_planet_to_config(planet, DEFAULT_CONFIG_PATH.expanduser())
+        config_path = DEFAULT_CONFIG_PATH.expanduser()
+        click.echo(f"Added planet '{planet.name}' to {config_path}.")
+        click.echo("Review ~/.orbit/config.yaml and run 'orbit start' again.")
+        return
+
     state = _load_state()
-    session_module.start(
-        branch=branch,
-        name=name,
-        config=config,
-        state=state,
-        cwd=Path.cwd(),
-        state_path=DEFAULT_STATE_PATH.expanduser(),
-    )
+    try:
+        session_module.start(
+            branch=branch,
+            name=name,
+            config=config,
+            state=state,
+            cwd=cwd,
+            state_path=DEFAULT_STATE_PATH.expanduser(),
+        )
+    except WorktreeError as e:
+        raise click.ClickException(str(e))
 
 
 @cli.command()
@@ -135,6 +152,9 @@ def _prompt_select(orbits: list[str]) -> str:
 def _load_config() -> Config:
     try:
         return load_config()
+    except ConfigNotice as e:
+        click.echo(str(e))
+        raise SystemExit(0)
     except ConfigError as e:
         raise click.ClickException(str(e))
 

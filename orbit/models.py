@@ -31,6 +31,4 @@ class Orbit(BaseModel):
     worktree: str
     tmux_session: str
     ports: dict[int, int] = Field(default_factory=dict)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

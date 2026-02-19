@@ -1,6 +1,17 @@
-import pytest
+from pathlib import Path
 
-from orbit.config import ConfigError, detect_planet, load_config
+import pytest
+import yaml
+
+from orbit.config import (
+    ConfigError,
+    ConfigNotice,
+    append_planet_to_config,
+    detect_planet,
+    load_config,
+    scaffold_planet,
+)
+from orbit.models import Planet
 
 
 class TestLoadConfig:
@@ -81,7 +92,7 @@ planets:
 
     def test_missing_file_creates_template_and_raises(self, tmp_path):
         config_file = tmp_path / "nonexistent.yaml"
-        with pytest.raises(ConfigError, match="add your planets and run again"):
+        with pytest.raises(ConfigNotice, match="add your planets and run again"):
             load_config(config_file)
         assert config_file.exists()
         assert "planets:" in config_file.read_text()
@@ -92,17 +103,17 @@ planets:
         with pytest.raises(ConfigError, match="Failed to parse config"):
             load_config(config_file)
 
-    def test_empty_file_raises(self, tmp_path):
+    def test_empty_file_returns_empty_config(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("")
-        with pytest.raises(ConfigError, match="No planets configured"):
-            load_config(config_file)
+        config = load_config(config_file)
+        assert config.planets == []
 
-    def test_missing_planets_key_raises(self, tmp_path):
+    def test_missing_planets_key_returns_empty_config(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("other_key: value\n")
-        with pytest.raises(ConfigError, match="No planets configured"):
-            load_config(config_file)
+        config = load_config(config_file)
+        assert config.planets == []
 
     def test_invalid_planet_schema_raises(self, tmp_path):
         config_file = tmp_path / "config.yaml"
@@ -177,3 +188,64 @@ planets:
         config = load_config(config_file)
         planet = detect_planet(planet1_dir, config)
         assert planet.name == "App One"
+
+
+class TestScaffoldPlanet:
+    def test_name_from_directory(self, tmp_path):
+        cwd = tmp_path / "ios-shortcuts"
+        cwd.mkdir()
+        planet = scaffold_planet(cwd)
+        assert planet.name == "ios-shortcuts"
+
+    def test_worktree_base_default(self, tmp_path):
+        cwd = tmp_path / "myapp"
+        cwd.mkdir()
+        planet = scaffold_planet(cwd)
+        assert planet.worktree_base == "~/orbits/myapp"
+
+    def test_path_relative_to_home(self):
+        home = Path.home()
+        cwd = home / "projects" / "myapp"
+        planet = scaffold_planet(cwd)
+        assert planet.path == "~/projects/myapp"
+
+    def test_path_absolute_when_outside_home(self, tmp_path):
+        home = Path.home()
+        try:
+            tmp_path.relative_to(home)
+            pytest.skip("tmp_path is under home on this system")
+        except ValueError:
+            pass
+        planet = scaffold_planet(tmp_path)
+        assert planet.path == str(tmp_path)
+
+
+class TestAppendPlanetToConfig:
+    def test_appended_content_is_valid_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("planets:\n")
+        planet = Planet(
+            name="myapp", path="~/projects/myapp", worktree_base="~/orbits/myapp"
+        )
+        append_planet_to_config(planet, config_file)
+        data = yaml.safe_load(config_file.read_text())
+        assert len(data["planets"]) == 1
+        assert data["planets"][0]["name"] == "myapp"
+
+    def test_appends_preserving_existing(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            "planets:\n"
+            "  - name: existing\n"
+            "    path: ~/projects/existing\n"
+            "    worktree_base: ~/orbits/existing\n"
+        )
+        planet = Planet(
+            name="myapp", path="~/projects/myapp", worktree_base="~/orbits/myapp"
+        )
+        append_planet_to_config(planet, config_file)
+        data = yaml.safe_load(config_file.read_text())
+        assert len(data["planets"]) == 2
+        names = [p["name"] for p in data["planets"]]
+        assert "existing" in names
+        assert "myapp" in names

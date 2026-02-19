@@ -12,6 +12,12 @@ class ConfigError(Exception):
     pass
 
 
+class ConfigNotice(Exception):
+    """Raised for expected situations that need user action but are not errors."""
+
+    pass
+
+
 class Config(BaseModel):
     planets: list[Planet]
 
@@ -37,7 +43,7 @@ def load_config(path: Path | None = None) -> Config:
     if not config_path.exists():
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(DEFAULT_CONFIG_TEMPLATE)
-        raise ConfigError(f"Created {config_path} — add your planets and run again.")
+        raise ConfigNotice(f"Created {config_path} — add your planets and run again.")
 
     try:
         with open(config_path) as f:
@@ -45,8 +51,9 @@ def load_config(path: Path | None = None) -> Config:
     except yaml.YAMLError as e:
         raise ConfigError(f"Failed to parse config: {e}") from e
 
-    if not data or not data.get("planets"):
-        raise ConfigError(f"No planets configured in {config_path}")
+    data = data or {}
+    if not data.get("planets"):
+        data["planets"] = []
 
     try:
         return Config(**data)
@@ -69,3 +76,25 @@ def detect_planet(cwd: Path, config: Config) -> Planet:
         f"Current directory is not within any configured planet.\n"
         f"Configured planets:\n{configured}"
     )
+
+
+def scaffold_planet(cwd: Path) -> Planet:
+    name = cwd.name
+    home = Path.home()
+    try:
+        rel = cwd.relative_to(home)
+        path = f"~/{rel}"
+    except ValueError:
+        path = str(cwd)
+    worktree_base = f"~/orbits/{name}"
+    return Planet(name=name, path=path, worktree_base=worktree_base)
+
+
+def append_planet_to_config(planet: Planet, config_path: Path) -> None:
+    snippet = (
+        f"\n  - name: {planet.name}\n"
+        f"    path: {planet.path}\n"
+        f"    worktree_base: {planet.worktree_base}\n"
+    )
+    with open(config_path, "a") as f:
+        f.write(snippet)
