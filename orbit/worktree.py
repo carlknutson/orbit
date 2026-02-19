@@ -108,7 +108,15 @@ def create_worktree(
 
     result = subprocess.run(cmd, cwd=repo_path, capture_output=True, text=True)
     if result.returncode != 0:
-        raise WorktreeError(f"Failed to create worktree: {result.stderr.strip()}")
+        stderr = result.stderr.strip()
+        if "already used by worktree" in stderr:
+            match = re.search(r"already used by worktree at '([^']+)'", stderr)
+            location = f" at {match.group(1)}" if match else ""
+            raise WorktreeError(
+                f"Branch '{branch}' is already checked out{location}. "
+                f"Run 'orbit start <new-branch>' to start on a different branch."
+            )
+        raise WorktreeError(f"Failed to create worktree: {stderr}")
 
 
 def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
