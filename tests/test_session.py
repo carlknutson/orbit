@@ -78,6 +78,7 @@ class TestStart:
         planet = make_planet(git_repo, tmp_path / "planets")
         config = make_config(planet)
         state = State()
+        state_file = tmp_path / "state.json"
 
         try:
             start(
@@ -86,6 +87,7 @@ class TestStart:
                 config=config,
                 state=state,
                 cwd=git_repo,
+                state_path=state_file,
             )
             assert (tmp_path / "planets" / "test-wt").exists()
         finally:
@@ -97,6 +99,7 @@ class TestStart:
         planet = make_planet(git_repo, tmp_path / "planets", panes=panes)
         config = make_config(planet)
         state = State()
+        state_file = tmp_path / "state.json"
 
         try:
             start(
@@ -105,6 +108,7 @@ class TestStart:
                 config=config,
                 state=state,
                 cwd=git_repo,
+                state_path=state_file,
             )
             ports_file = tmp_path / "planets" / "test-ports" / ".orbit" / "ports.json"
             assert ports_file.exists()
@@ -118,6 +122,7 @@ class TestStart:
         planet = make_planet(git_repo, tmp_path / "planets")
         config = make_config(planet)
         state = State()
+        state_file = tmp_path / "state.json"
 
         try:
             start(
@@ -126,6 +131,7 @@ class TestStart:
                 config=config,
                 state=state,
                 cwd=git_repo,
+                state_path=state_file,
             )
             gitignore = tmp_path / "planets" / "test-gi" / ".gitignore"
             assert ".orbit/" in gitignore.read_text().splitlines()
