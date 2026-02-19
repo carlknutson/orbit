@@ -67,6 +67,15 @@ def start(
     )
     tmux.new_session(orbit_name, first_dir)
 
+    tmux.set_option(orbit_name, "mouse", "on")
+
+    port_display = "  ".join(f":{p}" for p in port_map.values()) if port_map else ""
+    status_right_parts = [branch]
+    if port_display:
+        status_right_parts.append(port_display)
+    tmux.set_option(orbit_name, "status-left", f" {orbit_name} ")
+    tmux.set_option(orbit_name, "status-right", f" {' | '.join(status_right_parts)} ")
+
     for key, value in planet.env.items():
         tmux.set_environment(orbit_name, key, value)
 

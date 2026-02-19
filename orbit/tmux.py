@@ -51,6 +51,36 @@ def set_environment(session: str, key: str, value: str) -> None:
         raise TmuxError(f"Failed to set environment: {result.stderr.strip()}")
 
 
+def set_option(session: str, option: str, value: str) -> None:
+    result = subprocess.run(
+        ["tmux", "set-option", "-t", session, option, value],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
+def set_window_option(session: str, option: str, value: str) -> None:
+    result = subprocess.run(
+        ["tmux", "set-window-option", "-t", f"{session}:0", option, value],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
+def set_pane_title(target: str, title: str) -> None:
+    result = subprocess.run(
+        ["tmux", "select-pane", "-t", target, "-T", title],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
 def send_keys(target: str, command: str) -> None:
     result = subprocess.run(
         ["tmux", "send-keys", "-t", target, command, "Enter"],
@@ -117,6 +147,11 @@ def setup_panes(session: str, panes: list[Pane], worktree_path: Path) -> None:
     if layout:
         select_layout(session, layout)
 
+    if len(panes) > 1:
+        set_window_option(session, "pane-border-status", "top")
+        set_window_option(session, "pane-border-format", " #{pane_title} ")
+
     for i, pane in enumerate(panes):
+        set_pane_title(f"{session}:0.{i}", pane.name)
         if pane.command is not None:
             send_keys(f"{session}:0.{i}", pane.command)

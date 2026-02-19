@@ -117,6 +117,36 @@ def stop(name: str | None) -> None:
     )
 
 
+@cli.command("keys")
+def keys_cmd() -> None:
+    """Print a tmux cheat sheet for orbit sessions."""
+    click.echo(
+        "\n"
+        "  tmux essentials for orbit\n"
+        "\n"
+        "  navigating panes\n"
+        "    Ctrl-B arrow          move focus to another pane\n"
+        "    Ctrl-B z              zoom pane (toggle fullscreen)\n"
+        "    Ctrl-B {/}            swap pane positions\n"
+        "\n"
+        "  scrolling\n"
+        "    Ctrl-B [              enter scroll mode (q or Esc to exit)\n"
+        "    mouse wheel           scroll (enabled in all orbit sessions)\n"
+        "\n"
+        "  sessions\n"
+        "    Ctrl-B d              detach — orbit keeps running\n"
+        "    orbit switch NAME     jump to another orbit (from inside tmux)\n"
+        "    orbit attach NAME     attach to an orbit (from outside tmux)\n"
+        "    orbit list            see all running orbits\n"
+        "\n"
+        "  copy / paste\n"
+        "    Ctrl-B [              enter copy mode\n"
+        "    Space                 start selection\n"
+        "    Enter                 copy selection\n"
+        "    Ctrl-B ]              paste\n"
+    )
+
+
 def resolve_name(name: str | None, state: State, prefix_match: bool) -> str:
     orbits = list(state.orbits.keys())
 
