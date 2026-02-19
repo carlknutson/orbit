@@ -22,6 +22,7 @@ def git_repo(tmp_path):
         capture_output=True,
     )
     (repo / "README.md").write_text("# Test\n")
+    (repo / ".gitignore").write_text(".orbit/\n")
     subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
     subprocess.run(
         ["git", "commit", "-m", "Initial commit"],
