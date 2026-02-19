@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from orbit.config import ConfigError, load_config
+from orbit.config import Config, ConfigError, load_config
 from orbit.state import State, StateError, load_state
 
 DEFAULT_CONFIG_PATH = Path("~/.orbit/config.yaml")
@@ -126,13 +126,13 @@ def _prompt_select(orbits: list[str]) -> str:
     click.echo("Multiple orbits active:")
     for i, name in enumerate(orbits, 1):
         click.echo(f"  {i}. {name}")
-    idx = click.prompt("Select orbit", type=int)
+    idx: int = click.prompt("Select orbit", type=int)
     if 1 <= idx <= len(orbits):
         return orbits[idx - 1]
     raise click.ClickException("Invalid selection.")
 
 
-def _load_config():
+def _load_config() -> Config:
     try:
         return load_config()
     except ConfigError as e:
