@@ -61,7 +61,7 @@ def start(
     worktree.create_worktree(cwd, worktree_path, branch, remote)
     worktree.ensure_gitignore_has_orbit(worktree_path)
 
-    declared_ports = [p for pane in planet.panes for p in pane.ports]
+    declared_ports = [p for window in planet.windows for p in window.ports]
     port_map = assign_ports(declared_ports, state.all_ports())
 
     orbit_dir = worktree_path / ".orbit"
@@ -70,10 +70,7 @@ def start(
         json.dumps({str(k): v for k, v in port_map.items()}, indent=2)
     )
 
-    first_dir = (
-        worktree_path / planet.panes[0].directory if planet.panes else worktree_path
-    )
-    tmux.new_session(orbit_name, first_dir)
+    tmux.new_session(orbit_name, worktree_path)
 
     tmux.set_option(orbit_name, "mouse", "on")
 
@@ -87,7 +84,7 @@ def start(
     for key, value in planet.env.items():
         tmux.set_environment(orbit_name, key, value)
 
-    tmux.setup_panes(orbit_name, planet.panes, worktree_path)
+    tmux.setup_windows(orbit_name, planet.windows, worktree_path)
 
     orbit = Orbit(
         name=orbit_name,

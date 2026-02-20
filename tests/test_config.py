@@ -23,10 +23,8 @@ planets:
   - name: "My App"
     path: "~/projects/myapp"
     worktree_base: "~/planets"
-    panes:
+    windows:
       - name: "shell"
-        command: null
-        directory: "."
 """
         )
         config = load_config(config_file)
@@ -51,7 +49,7 @@ planets:
         assert config.planets[0].name == "App One"
         assert config.planets[1].name == "App Two"
 
-    def test_loads_pane_with_ports(self, tmp_path):
+    def test_loads_window_with_ports(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
             """
@@ -59,20 +57,18 @@ planets:
   - name: "My App"
     path: "~/projects/myapp"
     worktree_base: "~/planets"
-    panes:
-      - name: "ui"
+    windows:
+      - name: "server"
         command: "npm run dev"
-        directory: "./frontend"
         ports:
           - 3000
 """
         )
         config = load_config(config_file)
-        pane = config.planets[0].panes[0]
-        assert pane.name == "ui"
-        assert pane.command == "npm run dev"
-        assert pane.ports == [3000]
-        assert pane.directory == "./frontend"
+        window = config.planets[0].windows[0]
+        assert window.name == "server"
+        assert window.command == "npm run dev"
+        assert window.ports == [3000]
 
     def test_loads_env(self, tmp_path):
         config_file = tmp_path / "config.yaml"

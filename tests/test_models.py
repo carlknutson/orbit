@@ -1,6 +1,6 @@
 from datetime import timezone
 
-from orbit.models import Orbit, Pane, Planet
+from orbit.models import Orbit, Pane, Planet, Window
 
 
 class TestPane:
@@ -14,6 +14,18 @@ class TestPane:
         pane = Pane(name="ui", command="npm run dev", ports=[3000])
         assert pane.command == "npm run dev"
         assert pane.ports == [3000]
+
+
+class TestWindow:
+    def test_defaults(self) -> None:
+        window = Window(name="shell")
+        assert window.command is None
+        assert window.ports == []
+
+    def test_with_command_and_ports(self) -> None:
+        window = Window(name="server", command="npm run dev", ports=[3000])
+        assert window.command == "npm run dev"
+        assert window.ports == [3000]
 
 
 class TestPlanet:

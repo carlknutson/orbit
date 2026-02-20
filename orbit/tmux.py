@@ -2,7 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from orbit.models import Pane
+from orbit.models import Pane, Window
 
 
 class TmuxError(Exception):
@@ -169,3 +169,37 @@ def setup_panes(session: str, panes: list[Pane], worktree_path: Path) -> None:
         set_pane_title(f"{session}:0.{i}", pane.name)
         if pane.command is not None:
             send_keys(f"{session}:0.{i}", pane.command)
+
+
+def rename_window(session: str, index: int, name: str) -> None:
+    result = subprocess.run(
+        ["tmux", "rename-window", "-t", f"{session}:{index}", name],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
+def new_window(session: str, name: str, start_dir: Path) -> None:
+    result = subprocess.run(
+        ["tmux", "new-window", "-t", session, "-n", name, "-c", str(start_dir)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
+def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> None:
+    if not windows:
+        return
+
+    rename_window(session, 0, windows[0].name)
+    if windows[0].command:
+        send_keys(f"{session}:{windows[0].name}", windows[0].command)
+
+    for window in windows[1:]:
+        new_window(session, window.name, worktree_path)
+        if window.command:
+            send_keys(f"{session}:{window.name}", window.command)

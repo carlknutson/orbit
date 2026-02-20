@@ -5,18 +5,18 @@ import pytest
 from click.testing import CliRunner
 
 from orbit.config import Config
-from orbit.models import Orbit, Pane, Planet
+from orbit.models import Orbit, Planet, Window
 from orbit.session import start, stop
 from orbit.state import State, load_state
 from orbit.tmux import kill_session, session_exists
 
 
-def make_planet(repo_path: Path, worktree_base: Path, panes=None) -> Planet:
+def make_planet(repo_path: Path, worktree_base: Path, windows=None) -> Planet:
     return Planet(
         name="My App",
         path=str(repo_path),
         worktree_base=str(worktree_base),
-        panes=panes or [],
+        windows=windows or [],
     )
 
 
@@ -95,8 +95,8 @@ class TestStart:
                 kill_session("test-wt")
 
     def test_writes_ports_json(self, git_repo, tmp_path):
-        panes = [Pane(name="ui", command="echo hi", ports=[3000])]
-        planet = make_planet(git_repo, tmp_path / "planets", panes=panes)
+        windows = [Window(name="server", command="echo hi", ports=[3000])]
+        planet = make_planet(git_repo, tmp_path / "planets", windows=windows)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"

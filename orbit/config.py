@@ -30,10 +30,11 @@ planets:
   # - name: myproject
   #   path: ~/projects/myproject
   #   worktree_base: ~/orbits/myproject
-  #   panes:
+  #   windows:
   #     - name: server
   #       command: npm run dev
   #       ports: [3000]
+  #     - name: shell
 """
 
 

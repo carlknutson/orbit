@@ -101,6 +101,12 @@ Work through these in order. Each step builds on the previous.
 
 Remove this section once the implementation is complete.
 
+## Future
+
+Features intentionally deferred — pick these up when the time is right:
+
+- **Pane config per window** — `Window` currently supports only a single `command`. The natural next step is `panes: list[Pane]` on `Window`, letting users define split layouts per window (e.g. editor + test runner side by side). The `Pane` model and `setup_panes` logic in `tmux.py` already exist as a foundation; the main work is wiring them into `setup_windows` and updating the config schema.
+
 ## Project Structure
 
 ```

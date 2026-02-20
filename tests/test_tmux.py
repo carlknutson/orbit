@@ -1,6 +1,6 @@
 import pytest
 
-from orbit.models import Pane
+from orbit.models import Pane, Window
 from orbit.tmux import (
     TmuxError,
     _layout_for,
@@ -12,6 +12,7 @@ from orbit.tmux import (
     session_exists,
     set_environment,
     setup_panes,
+    setup_windows,
     split_window,
 )
 
@@ -168,5 +169,37 @@ class TestSetupPanes:
         try:
             new_session(name, tmp_path)
             setup_panes(name, [], tmp_path)
+        finally:
+            kill_session(name)
+
+
+@pytest.mark.integration
+class TestSetupWindows:
+    def test_single_window_no_command(self, tmp_path):
+        name = "orbit-test-wins-single"
+        try:
+            new_session(name, tmp_path)
+            setup_windows(name, [Window(name="shell")], tmp_path)
+        finally:
+            kill_session(name)
+
+    def test_multiple_windows_with_commands(self, tmp_path):
+        name = "orbit-test-wins-multi"
+        windows = [
+            Window(name="server", command="echo server"),
+            Window(name="shell"),
+            Window(name="db", command="echo db"),
+        ]
+        try:
+            new_session(name, tmp_path)
+            setup_windows(name, windows, tmp_path)
+        finally:
+            kill_session(name)
+
+    def test_empty_windows_list_is_noop(self, tmp_path):
+        name = "orbit-test-wins-empty"
+        try:
+            new_session(name, tmp_path)
+            setup_windows(name, [], tmp_path)
         finally:
             kill_session(name)
