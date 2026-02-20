@@ -107,6 +107,23 @@ def stop(name: str | None) -> None:
     )
 
 
+@cli.command("config")
+@click.option("--path", "print_path", is_flag=True, help="Print the config file path.")
+def config_cmd(print_path: bool) -> None:
+    """Open the orbit config file in $EDITOR."""
+    config_path = DEFAULT_CONFIG_PATH.expanduser()
+    if print_path:
+        click.echo(config_path)
+        return
+    if not config_path.exists():
+        from orbit.config import DEFAULT_CONFIG_TEMPLATE
+
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(DEFAULT_CONFIG_TEMPLATE)
+        click.echo(f"Created {config_path}")
+    click.edit(filename=str(config_path))
+
+
 @cli.command("keys")
 def keys_cmd() -> None:
     """Print a tmux cheat sheet for orbit sessions."""

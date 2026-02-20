@@ -25,22 +25,46 @@ class Config(BaseModel):
 DEFAULT_CONFIG_TEMPLATE = """\
 # Orbit configuration
 # Add one entry per project (planet) you want to manage.
+#
+# Each planet has one or more windows. Windows come in two forms:
+#
+#   Single-pane window (use `command` directly on the window):
+#
+#     windows:
+#       - name: server
+#         command: npm run dev
+#         ports: [3000]       # optional — orbit tracks and remaps these
+#
+#   Multi-pane window (use `panes` for a split layout):
+#
+#     windows:
+#       - name: dev
+#         panes:
+#           - name: editor
+#             command: vim .
+#           - name: tests
+#             command: pytest --watch
+#             directory: ./backend   # optional — relative to worktree root
+#
+# You can mix both styles across windows in the same planet.
 
 planets:
   # - name: myproject
   #   path: ~/projects/myproject
   #   worktree_base: ~/orbits/myproject
+  #   env:                          # optional environment variables
+  #     NODE_ENV: development
   #   windows:
-  #     - name: server
+  #     - name: server              # single-pane: just a command
   #       command: npm run dev
-  #       ports: [3000]
-  #     - name: editor
+  #       ports: [3000, 5173]
+  #     - name: dev                 # multi-pane: split layout
   #       panes:
-  #         - name: vim
+  #         - name: editor
   #           command: vim .
   #         - name: tests
-  #           command: pytest
-  #     - name: shell
+  #           command: pytest --watch
+  #     - name: shell               # empty window — no command, just a shell
 """
 
 

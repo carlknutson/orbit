@@ -115,7 +115,7 @@ def start(
     if tmux.inside_tmux():
         tmux.switch_client(orbit_name)
     else:
-        click.echo(f"\nRun 'orbit attach {orbit_name}' to connect.")
+        tmux.attach_session(orbit_name)
 
 
 def stop(
