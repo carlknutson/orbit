@@ -29,22 +29,30 @@ def start(
         click.echo(remote_notice)
 
     branch_slug = worktree.slugify(branch)
-    orbit_name = name if name is not None else f"{planet.slug}-{branch_slug}"
 
-    existing = state.get(orbit_name)
-    if existing is not None:
-        if tmux.session_exists(orbit_name):
-            raise click.ClickException(
-                f"An orbit named '{orbit_name}' already exists. "
-                f"Use --name to assign a unique name, "
-                f"or 'orbit stop {orbit_name}' to tear it down first."
-            )
-        else:
-            raise click.ClickException(
-                f"An orbit named '{orbit_name}' exists but its tmux session is no "
-                f"longer live (stale). "
-                f"Run 'orbit stop {orbit_name}' to clean it up first."
-            )
+    if name is not None:
+        orbit_name = name
+        existing = state.get(orbit_name)
+        if existing is not None:
+            if tmux.session_exists(orbit_name):
+                raise click.ClickException(
+                    f"An orbit named '{orbit_name}' already exists. "
+                    f"Use a different --name, "
+                    f"or 'orbit stop {orbit_name}' to tear it down first."
+                )
+            else:
+                raise click.ClickException(
+                    f"An orbit named '{orbit_name}' exists but its tmux session is no "
+                    f"longer live (stale). "
+                    f"Run 'orbit stop {orbit_name}' to clean it up first."
+                )
+    else:
+        orbit_name = branch_slug
+        if state.get(orbit_name) is not None:
+            n = 2
+            while state.get(f"{branch_slug}-{n}") is not None:
+                n += 1
+            orbit_name = f"{branch_slug}-{n}"
 
     worktree_base = Path(planet.worktree_base).expanduser()
     worktree_path = worktree_base / orbit_name

@@ -168,6 +168,39 @@ class TestStart:
             if session_exists("test-coll"):
                 kill_session("test-coll")
 
+    def test_auto_numbered_on_default_name_collision(self, git_repo, tmp_path):
+        planet = make_planet(git_repo, tmp_path / "planets")
+        config = make_config(planet)
+        state = State()
+        state_file = tmp_path / "state.json"
+
+        # Simulate a pre-existing "feat" orbit from another planet so the
+        # default name collides and auto-numbering kicks in.
+        state.add(
+            Orbit(
+                name="feat",
+                planet="other-planet",
+                branch="feat",
+                worktree=str(tmp_path / "other" / "feat"),
+                tmux_session="feat",
+            )
+        )
+
+        try:
+            start(
+                branch="feat",
+                name=None,
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+            saved = load_state(state_file)
+            assert "feat-2" in saved.orbits
+        finally:
+            if session_exists("feat-2"):
+                kill_session("feat-2")
+
     def test_stale_orbit_raises(self, git_repo, tmp_path):
         planet = make_planet(git_repo, tmp_path / "planets")
         config = make_config(planet)
