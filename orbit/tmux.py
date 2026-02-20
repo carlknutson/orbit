@@ -191,6 +191,16 @@ def new_window(session: str, name: str, start_dir: Path) -> None:
         raise TmuxError(result.stderr.strip())
 
 
+def select_window(session: str, index: int) -> None:
+    result = subprocess.run(
+        ["tmux", "select-window", "-t", f"{session}:{index}"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
 def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> None:
     if not windows:
         return
@@ -203,3 +213,5 @@ def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> N
         new_window(session, window.name, worktree_path)
         if window.command:
             send_keys(f"{session}:{window.name}", window.command)
+
+    select_window(session, 0)
