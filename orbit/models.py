@@ -15,6 +15,7 @@ class Window(BaseModel):
     name: str
     command: str | None = None
     ports: list[int] = Field(default_factory=list)
+    panes: list[Pane] = Field(default_factory=list)
 
 
 class Planet(BaseModel):

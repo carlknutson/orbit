@@ -110,7 +110,7 @@ class TestSplitWindow:
         name = "orbit-test-split"
         try:
             new_session(name, tmp_path)
-            split_window(name, tmp_path)
+            split_window(name, "0", tmp_path)
             # success = no TmuxError raised
         finally:
             kill_session(name)
@@ -122,8 +122,8 @@ class TestSelectLayout:
         name = "orbit-test-layout"
         try:
             new_session(name, tmp_path)
-            split_window(name, tmp_path)
-            select_layout(name, "even-horizontal")
+            split_window(name, "0", tmp_path)
+            select_layout(name, "0", "even-horizontal")
         finally:
             kill_session(name)
 
@@ -135,7 +135,7 @@ class TestSetupPanes:
         panes = [Pane(name="shell")]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, panes, tmp_path)
+            setup_panes(name, "0", panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -147,7 +147,7 @@ class TestSetupPanes:
         ]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, panes, tmp_path)
+            setup_panes(name, "0", panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -160,7 +160,7 @@ class TestSetupPanes:
         ]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, panes, tmp_path)
+            setup_panes(name, "0", panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -168,7 +168,7 @@ class TestSetupPanes:
         name = "orbit-test-panes-empty"
         try:
             new_session(name, tmp_path)
-            setup_panes(name, [], tmp_path)
+            setup_panes(name, "0", [], tmp_path)
         finally:
             kill_session(name)
 
@@ -201,5 +201,20 @@ class TestSetupWindows:
         try:
             new_session(name, tmp_path)
             setup_windows(name, [], tmp_path)
+        finally:
+            kill_session(name)
+
+    def test_window_with_panes(self, tmp_path):
+        name = "orbit-test-wins-panes"
+        windows = [
+            Window(
+                name="editor",
+                panes=[Pane(name="vim", command="echo vim"), Pane(name="tests")],
+            ),
+            Window(name="shell"),
+        ]
+        try:
+            new_session(name, tmp_path)
+            setup_windows(name, windows, tmp_path)
         finally:
             kill_session(name)

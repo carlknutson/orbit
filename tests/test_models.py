@@ -27,6 +27,11 @@ class TestWindow:
         assert window.command == "npm run dev"
         assert window.ports == [3000]
 
+    def test_window_with_panes(self) -> None:
+        window = Window(name="editor", panes=[Pane(name="vim"), Pane(name="tests")])
+        assert len(window.panes) == 2
+        assert window.command is None
+
 
 class TestPlanet:
     def test_slug_from_path(self) -> None:

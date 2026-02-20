@@ -61,7 +61,14 @@ def start(
     worktree.create_worktree(cwd, worktree_path, branch, remote)
     worktree.ensure_gitignore_has_orbit(worktree_path)
 
-    declared_ports = [p for window in planet.windows for p in window.ports]
+    declared_ports = [
+        p
+        for window in planet.windows
+        for p in [
+            *window.ports,
+            *(port for pane in window.panes for port in pane.ports),
+        ]
+    ]
     port_map = assign_ports(declared_ports, state.all_ports())
 
     orbit_dir = worktree_path / ".orbit"

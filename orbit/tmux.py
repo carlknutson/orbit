@@ -61,9 +61,9 @@ def set_option(session: str, option: str, value: str) -> None:
         raise TmuxError(result.stderr.strip())
 
 
-def set_window_option(session: str, option: str, value: str) -> None:
+def set_window_option(session: str, window: str, option: str, value: str) -> None:
     result = subprocess.run(
-        ["tmux", "set-window-option", "-t", f"{session}:0", option, value],
+        ["tmux", "set-window-option", "-t", f"{session}:{window}", option, value],
         capture_output=True,
         text=True,
     )
@@ -91,9 +91,9 @@ def send_keys(target: str, command: str) -> None:
         raise TmuxError(f"Failed to send keys to '{target}': {result.stderr.strip()}")
 
 
-def split_window(session: str, start_dir: Path) -> None:
+def split_window(session: str, window: str, start_dir: Path) -> None:
     result = subprocess.run(
-        ["tmux", "split-window", "-t", f"{session}:0", "-c", str(start_dir)],
+        ["tmux", "split-window", "-t", f"{session}:{window}", "-c", str(start_dir)],
         capture_output=True,
         text=True,
     )
@@ -101,9 +101,9 @@ def split_window(session: str, start_dir: Path) -> None:
         raise TmuxError(f"Failed to split window: {result.stderr.strip()}")
 
 
-def select_layout(session: str, layout: str) -> None:
+def select_layout(session: str, window: str, layout: str) -> None:
     result = subprocess.run(
-        ["tmux", "select-layout", "-t", f"{session}:0", layout],
+        ["tmux", "select-layout", "-t", f"{session}:{window}", layout],
         capture_output=True,
         text=True,
     )
@@ -149,26 +149,28 @@ def _layout_for(n: int) -> str | None:
     return "tiled"
 
 
-def setup_panes(session: str, panes: list[Pane], worktree_path: Path) -> None:
+def setup_panes(
+    session: str, window: str, panes: list[Pane], worktree_path: Path
+) -> None:
     if not panes:
         return
 
     for pane in panes[1:]:
         pane_dir = worktree_path / pane.directory
-        split_window(session, pane_dir)
+        split_window(session, window, pane_dir)
 
     layout = _layout_for(len(panes))
     if layout:
-        select_layout(session, layout)
+        select_layout(session, window, layout)
 
     if len(panes) > 1:
-        set_window_option(session, "pane-border-status", "top")
-        set_window_option(session, "pane-border-format", " #{pane_title} ")
+        set_window_option(session, window, "pane-border-status", "top")
+        set_window_option(session, window, "pane-border-format", " #{pane_title} ")
 
     for i, pane in enumerate(panes):
-        set_pane_title(f"{session}:0.{i}", pane.name)
+        set_pane_title(f"{session}:{window}.{i}", pane.name)
         if pane.command is not None:
-            send_keys(f"{session}:0.{i}", pane.command)
+            send_keys(f"{session}:{window}.{i}", pane.command)
 
 
 def rename_window(session: str, index: int, name: str) -> None:
@@ -206,12 +208,16 @@ def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> N
         return
 
     rename_window(session, 0, windows[0].name)
-    if windows[0].command:
+    if windows[0].panes:
+        setup_panes(session, windows[0].name, windows[0].panes, worktree_path)
+    elif windows[0].command:
         send_keys(f"{session}:{windows[0].name}", windows[0].command)
 
     for window in windows[1:]:
         new_window(session, window.name, worktree_path)
-        if window.command:
+        if window.panes:
+            setup_panes(session, window.name, window.panes, worktree_path)
+        elif window.command:
             send_keys(f"{session}:{window.name}", window.command)
 
     select_window(session, 0)

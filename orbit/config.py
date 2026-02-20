@@ -34,6 +34,12 @@ planets:
   #     - name: server
   #       command: npm run dev
   #       ports: [3000]
+  #     - name: editor
+  #       panes:
+  #         - name: vim
+  #           command: vim .
+  #         - name: tests
+  #           command: pytest
   #     - name: shell
 """
 
