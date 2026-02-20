@@ -111,6 +111,16 @@ def select_layout(session: str, layout: str) -> None:
         raise TmuxError(f"Failed to select layout: {result.stderr.strip()}")
 
 
+def choose_session() -> None:
+    result = subprocess.run(
+        ["tmux", "choose-tree", "-s"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+
+
 def switch_client(name: str) -> None:
     result = subprocess.run(
         ["tmux", "switch-client", "-t", name],
@@ -123,6 +133,10 @@ def switch_client(name: str) -> None:
 
 def attach_session(name: str) -> None:
     os.execvp("tmux", ["tmux", "attach-session", "-t", name])
+
+
+def attach_and_choose() -> None:
+    os.execvp("tmux", ["tmux", "attach-session", ";", "choose-tree", "-s"])
 
 
 def _layout_for(n: int) -> str | None:

@@ -50,35 +50,19 @@ def start(branch: str | None, name: str | None) -> None:
         raise click.ClickException(str(e))
 
 
-@cli.command()
-@click.argument("name", required=False)
-def attach(name: str | None) -> None:
-    """Attach to a running orbit's tmux session."""
-    from orbit import tmux
-
-    state = _load_state()
-    orbit_name = resolve_name(name, state, prefix_match=False)
-    if tmux.inside_tmux():
-        click.echo(
-            "You are inside a tmux session. "
-            "Use 'orbit switch' to jump between orbits without nesting sessions."
-        )
-    tmux.attach_session(orbit_name)
-
-
 @cli.command("switch")
-@click.argument("name", required=False)
-def switch_cmd(name: str | None) -> None:
-    """Switch to another orbit (from inside tmux)."""
+def switch_cmd() -> None:
+    """Pick and switch to an orbit."""
     from orbit import tmux
 
-    if not tmux.inside_tmux():
-        raise click.ClickException(
-            "Not inside a tmux session. Use 'orbit attach' instead."
-        )
+    if tmux.inside_tmux():
+        tmux.choose_session()
+        return
+
     state = _load_state()
-    orbit_name = resolve_name(name, state, prefix_match=True)
-    tmux.switch_client(orbit_name)
+    if not state.orbits:
+        raise click.ClickException("No active orbits.")
+    tmux.attach_and_choose()
 
 
 @cli.command("list")
@@ -91,15 +75,21 @@ def list_cmd() -> None:
         click.echo("No active orbits.")
         return
 
-    click.echo(f"{'ORBIT':<20} {'PLANET':<10} {'BRANCH':<20} {'PORTS':<20} STATUS")
+    headers = ("ORBIT", "PLANET", "BRANCH", "PORTS", "STATUS")
+    rows = []
     for orbit in state.orbits.values():
         status = "running" if tmux.session_exists(orbit.name) else "stale"
         ports_str = ",".join(str(p) for p in orbit.ports.values())
-        line = (
-            f"{orbit.name:<20} {orbit.planet:<10} "
-            f"{orbit.branch:<20} {ports_str:<20} {status}"
-        )
-        click.echo(line)
+        rows.append((orbit.name, orbit.planet, orbit.branch, ports_str, status))
+
+    widths = [
+        max(len(headers[i]), max(len(r[i]) for r in rows))
+        for i in range(len(headers) - 1)
+    ]
+    fmt = "  ".join(f"{{:<{w}}}" for w in widths)
+    click.echo(fmt.format(*headers[:-1]) + "  " + headers[-1])
+    for row in rows:
+        click.echo(fmt.format(*row[:-1]) + "  " + row[-1])
 
 
 @cli.command()
@@ -135,8 +125,7 @@ def keys_cmd() -> None:
         "\n"
         "  sessions\n"
         "    Ctrl-B d              detach — orbit keeps running\n"
-        "    orbit switch NAME     jump to another orbit (from inside tmux)\n"
-        "    orbit attach NAME     attach to an orbit (from outside tmux)\n"
+        "    orbit switch          pick and switch to an orbit\n"
         "    orbit list            see all running orbits\n"
         "\n"
         "  copy / paste\n"
