@@ -52,9 +52,9 @@ planets:
   #   path: ~/projects/myproject    # worktrees are created as siblings
   #   env:                          # optional environment variables
   #     NODE_ENV: development
-  #   sync_untracked:        # optional: limit which untracked files to sync
-  #     - .env             # by default all untracked files are synced
-  #     - node_modules     # (dotfiles → symlinked; others → copied; omit to sync all)
+  #   sync_untracked:        # optional: override which untracked files to symlink
+  #     - .env             # by default all dotfiles are symlinked into the worktree
+  #     - .env.local       # explicit list disables the default; only listed paths sync
   #   windows:
   #     - name: server              # single-pane: just a command
   #       command: npm run dev

@@ -1,5 +1,4 @@
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -188,12 +187,7 @@ def sync_untracked_to_worktree(
             if src.name == ".git":
                 continue
             dst.parent.mkdir(parents=True, exist_ok=True)
-            if src.name.startswith("."):
-                dst.symlink_to(src.resolve())
-            elif src.is_dir():
-                shutil.copytree(src, dst)
-            else:
-                shutil.copy2(src, dst)
+            dst.symlink_to(src.resolve())
             synced.append(str(rel))
     return synced
 

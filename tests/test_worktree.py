@@ -214,7 +214,7 @@ class TestSyncUntrackedToWorktree:
         env_file.write_text("SECRET=updated\n")
         assert (worktree_path / ".env").read_text() == "SECRET=updated\n"
 
-    def test_copies_non_dotfile_directory(self, git_repo, tmp_path):
+    def test_symlinks_non_dotfile_directory(self, git_repo, tmp_path):
         node_modules = git_repo / "node_modules"
         node_modules.mkdir()
         (node_modules / "pkg.js").write_text("module.exports = {}\n")
@@ -223,19 +223,18 @@ class TestSyncUntrackedToWorktree:
         synced = sync_untracked_to_worktree(git_repo, worktree_path, ["node_modules"])
         assert synced == ["node_modules"]
         dst = worktree_path / "node_modules"
-        assert dst.is_dir()
-        assert not dst.is_symlink()
-        assert (dst / "pkg.js").exists()
+        assert dst.is_symlink()
+        assert dst.resolve() == (git_repo / "node_modules").resolve()
 
-    def test_copies_non_dotfile_regular_file(self, git_repo, tmp_path):
+    def test_symlinks_non_dotfile_regular_file(self, git_repo, tmp_path):
         (git_repo / "build.log").write_text("ok\n")
         worktree_path = tmp_path / "wt"
         create_worktree(git_repo, worktree_path, "feat")
         synced = sync_untracked_to_worktree(git_repo, worktree_path, ["build.log"])
         assert synced == ["build.log"]
         dst = worktree_path / "build.log"
-        assert dst.is_file()
-        assert not dst.is_symlink()
+        assert dst.is_symlink()
+        assert dst.resolve() == (git_repo / "build.log").resolve()
 
     def test_skips_git_tracked_files(self, git_repo, tmp_path):
         worktree_path = tmp_path / "wt"

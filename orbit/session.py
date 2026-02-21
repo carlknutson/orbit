@@ -61,7 +61,7 @@ def start(
 
     patterns = planet.sync_untracked
     if patterns is None:
-        patterns = ["*", ".*"]
+        patterns = [".*"]
     if patterns:
         synced = worktree.sync_untracked_to_worktree(
             Path(planet.path).expanduser(),
