@@ -16,6 +16,7 @@ def launch(
     state: State,
     cwd: Path,
     state_path: Path | None = None,
+    base: str | None = None,
 ) -> None:
     planet = detect_planet(cwd, config)
 
@@ -56,7 +57,22 @@ def launch(
     worktree_path = worktree_base / orbit_name
     worktree_base.mkdir(parents=True, exist_ok=True)
 
-    worktree.create_worktree(cwd, worktree_path, branch, remote)
+    if worktree.has_uncommitted_changes(cwd):
+        click.echo(
+            "Note: working tree has uncommitted changes (not transferred to worktree)"
+        )
+
+    is_new_branch = not worktree.branch_exists_locally(cwd, branch) and not (
+        remote and worktree.remote_branch_exists(cwd, remote, branch)
+    )
+
+    if is_new_branch and base is None and remote is not None:
+        base = worktree.detect_default_branch(cwd, remote)
+
+    if is_new_branch and base is not None:
+        click.echo(f"Branching '{branch}' from '{base}'")
+
+    worktree.create_worktree(cwd, worktree_path, branch, remote, base=base)
     worktree.ensure_gitignore_has_orbit(worktree_path)
 
     patterns = planet.sync_untracked

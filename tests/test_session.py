@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,7 @@ from orbit.config import Config
 from orbit.models import Orbit, Planet
 from orbit.session import destroy, launch
 from orbit.state import State, load_state
-from orbit.tmux import kill_session, session_exists
+from orbit.tmux import TmuxError, kill_session, session_exists
 
 
 def make_planet(repo_path: Path, windows=None, sync_untracked=None) -> Planet:
@@ -218,6 +219,76 @@ class TestStart:
                 state=state,
                 cwd=git_repo,
             )
+
+    def test_dirty_notice_printed_on_launch(self, git_repo, tmp_path, capsys):
+        (git_repo / "dirty.txt").write_text("uncommitted\n")
+        planet = make_planet(git_repo)
+        config = make_config(planet)
+        state = State()
+        state_file = tmp_path / "state.json"
+
+        try:
+            launch(
+                branch="feat",
+                name="test-dirty",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
+        finally:
+            if session_exists("test-dirty"):
+                kill_session("test-dirty")
+
+        captured = capsys.readouterr()
+        assert "uncommitted changes" in captured.out
+
+    def test_new_branch_branched_from_explicit_base(self, git_repo, tmp_path):
+        subprocess.run(
+            ["git", "checkout", "-b", "base-branch"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        (git_repo / "base-file.txt").write_text("from base\n")
+        subprocess.run(
+            ["git", "add", "."], cwd=git_repo, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "base commit"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "checkout", "-"], cwd=git_repo, check=True, capture_output=True
+        )
+
+        planet = make_planet(git_repo)
+        config = make_config(planet)
+        state = State()
+        state_file = tmp_path / "state.json"
+
+        try:
+            launch(
+                branch="new-feature",
+                name="test-base-branch",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+                base="base-branch",
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
+        finally:
+            if session_exists("test-base-branch"):
+                kill_session("test-base-branch")
+
+        wt_path = git_repo.parent / "test-base-branch"
+        assert (wt_path / "base-file.txt").exists()
 
 
 @pytest.mark.integration

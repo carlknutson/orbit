@@ -66,15 +66,8 @@ def choose_remote(repo_path: Path) -> tuple[str | None, str | None]:
     return remote, f"No 'origin' remote found; using '{remote}'"
 
 
-def create_worktree(
-    repo_path: Path,
-    worktree_path: Path,
-    branch: str,
-    remote: str | None = None,
-) -> None:
-    worktree_path.parent.mkdir(parents=True, exist_ok=True)
-
-    local_exists = (
+def branch_exists_locally(repo_path: Path, branch: str) -> bool:
+    return (
         subprocess.run(
             ["git", "rev-parse", "--verify", branch],
             cwd=repo_path,
@@ -82,6 +75,36 @@ def create_worktree(
         ).returncode
         == 0
     )
+
+
+def detect_default_branch(repo_path: Path, remote: str) -> str | None:
+    result = subprocess.run(
+        ["git", "symbolic-ref", f"refs/remotes/{remote}/HEAD"],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        ref = result.stdout.strip()
+        prefix = f"refs/remotes/{remote}/"
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
+    for candidate in ("main", "master", "develop"):
+        if branch_exists_locally(repo_path, candidate):
+            return candidate
+    return None
+
+
+def create_worktree(
+    repo_path: Path,
+    worktree_path: Path,
+    branch: str,
+    remote: str | None = None,
+    base: str | None = None,
+) -> None:
+    worktree_path.parent.mkdir(parents=True, exist_ok=True)
+
+    local_exists = branch_exists_locally(repo_path, branch)
 
     if local_exists:
         cmd = ["git", "worktree", "add", str(worktree_path), branch]
@@ -105,6 +128,8 @@ def create_worktree(
         ]
     else:
         cmd = ["git", "worktree", "add", "-b", branch, str(worktree_path)]
+        if base:
+            cmd.append(base)
 
     result = subprocess.run(cmd, cwd=repo_path, capture_output=True, text=True)
     if result.returncode != 0:

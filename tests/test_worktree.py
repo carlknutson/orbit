@@ -7,6 +7,7 @@ from orbit.worktree import (
     choose_remote,
     create_worktree,
     detect_branch,
+    detect_default_branch,
     ensure_gitignore_has_orbit,
     get_main_repo_path,
     get_remotes,
@@ -272,6 +273,38 @@ class TestSyncUntrackedToWorktree:
         assert sorted(synced) == [".env", ".env.local"]
         assert (worktree_path / ".env").is_symlink()
         assert (worktree_path / ".env.local").is_symlink()
+
+
+class TestDetectDefaultBranch:
+    def test_detect_default_branch_via_symbolic_ref(self, git_repo):
+        subprocess.run(
+            [
+                "git",
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+            ],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        result = detect_default_branch(git_repo, "origin")
+        assert result == "main"
+
+    def test_detect_default_branch_fallback_to_main(self, git_repo):
+        result = detect_default_branch(git_repo, "origin")
+        assert result in ("main", "master")
+
+    def test_detect_default_branch_returns_none(self, git_repo):
+        current = detect_branch(git_repo)
+        subprocess.run(
+            ["git", "branch", "-m", current, "custom-branch"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        result = detect_default_branch(git_repo, "origin")
+        assert result is None
 
 
 class TestEnsureGitignoreHasOrbit:

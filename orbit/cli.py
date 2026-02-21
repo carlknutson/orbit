@@ -18,7 +18,8 @@ def cli() -> None:
 @cli.command()
 @click.argument("branch", required=False)
 @click.option("--name", "-n", help="Override the orbit name")
-def launch(branch: str | None, name: str | None) -> None:
+@click.option("--from", "base", default=None, help="Base branch for new branch")
+def launch(branch: str | None, name: str | None, base: str | None) -> None:
     """Create a new orbit for the current planet."""
     from orbit import session as session_module
     from orbit.config import append_planet_to_config, detect_planet, scaffold_planet
@@ -45,6 +46,7 @@ def launch(branch: str | None, name: str | None) -> None:
             state=state,
             cwd=cwd,
             state_path=DEFAULT_STATE_PATH.expanduser(),
+            base=base,
         )
     except WorktreeError as e:
         raise click.ClickException(str(e))
