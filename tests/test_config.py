@@ -22,7 +22,6 @@ class TestLoadConfig:
 planets:
   - name: "My App"
     path: "~/projects/myapp"
-    worktree_base: "~/planets"
     windows:
       - name: "shell"
 """
@@ -38,37 +37,14 @@ planets:
 planets:
   - name: "App One"
     path: "~/projects/app1"
-    worktree_base: "~/planets"
   - name: "App Two"
     path: "~/projects/app2"
-    worktree_base: "~/planets"
 """
         )
         config = load_config(config_file)
         assert len(config.planets) == 2
         assert config.planets[0].name == "App One"
         assert config.planets[1].name == "App Two"
-
-    def test_loads_window_with_ports(self, tmp_path):
-        config_file = tmp_path / "config.yaml"
-        config_file.write_text(
-            """
-planets:
-  - name: "My App"
-    path: "~/projects/myapp"
-    worktree_base: "~/planets"
-    windows:
-      - name: "server"
-        command: "npm run dev"
-        ports:
-          - 3000
-"""
-        )
-        config = load_config(config_file)
-        window = config.planets[0].windows[0]
-        assert window.name == "server"
-        assert window.command == "npm run dev"
-        assert window.ports == [3000]
 
     def test_loads_env(self, tmp_path):
         config_file = tmp_path / "config.yaml"
@@ -77,7 +53,6 @@ planets:
 planets:
   - name: "My App"
     path: "~/projects/myapp"
-    worktree_base: "~/planets"
     env:
       NODE_ENV: "development"
       DEBUG: "true"
@@ -133,7 +108,6 @@ class TestDetectPlanet:
 planets:
   - name: "My App"
     path: "{planet_dir}"
-    worktree_base: "{tmp_path}/planets"
 """
         )
         return load_config(config_file), planet_dir
@@ -175,10 +149,8 @@ planets:
 planets:
   - name: "App One"
     path: "{planet1_dir}"
-    worktree_base: "{tmp_path}/planets"
   - name: "App Two"
     path: "{planet2_dir}"
-    worktree_base: "{tmp_path}/planets"
 """
         )
         config = load_config(config_file)
@@ -192,12 +164,6 @@ class TestScaffoldPlanet:
         cwd.mkdir()
         planet = scaffold_planet(cwd)
         assert planet.name == "ios-shortcuts"
-
-    def test_worktree_base_default(self, tmp_path):
-        cwd = tmp_path / "myapp"
-        cwd.mkdir()
-        planet = scaffold_planet(cwd)
-        assert planet.worktree_base == "~/orbits/myapp"
 
     def test_path_relative_to_home(self):
         home = Path.home()
@@ -220,9 +186,7 @@ class TestAppendPlanetToConfig:
     def test_appended_content_is_valid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("planets:\n")
-        planet = Planet(
-            name="myapp", path="~/projects/myapp", worktree_base="~/orbits/myapp"
-        )
+        planet = Planet(name="myapp", path="~/projects/myapp")
         append_planet_to_config(planet, config_file)
         data = yaml.safe_load(config_file.read_text())
         assert len(data["planets"]) == 1
@@ -231,14 +195,9 @@ class TestAppendPlanetToConfig:
     def test_appends_preserving_existing(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
-            "planets:\n"
-            "  - name: existing\n"
-            "    path: ~/projects/existing\n"
-            "    worktree_base: ~/orbits/existing\n"
+            "planets:\n  - name: existing\n    path: ~/projects/existing\n"
         )
-        planet = Planet(
-            name="myapp", path="~/projects/myapp", worktree_base="~/orbits/myapp"
-        )
+        planet = Planet(name="myapp", path="~/projects/myapp")
         append_planet_to_config(planet, config_file)
         data = yaml.safe_load(config_file.read_text())
         assert len(data["planets"]) == 2

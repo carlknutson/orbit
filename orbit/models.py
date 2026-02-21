@@ -8,13 +8,11 @@ class Pane(BaseModel):
     name: str
     command: str | None = None
     directory: str = "."
-    ports: list[int] = Field(default_factory=list)
 
 
 class Window(BaseModel):
     name: str
     command: str | None = None
-    ports: list[int] = Field(default_factory=list)
     panes: list[Pane] = Field(default_factory=list)
 
 
@@ -22,7 +20,6 @@ class Planet(BaseModel):
     name: str
     path: str
     description: str | None = None
-    worktree_base: str
     env: dict[str, str] = Field(default_factory=dict)
     windows: list[Window] = Field(default_factory=list)
 
@@ -37,5 +34,4 @@ class Orbit(BaseModel):
     branch: str
     worktree: str
     tmux_session: str
-    ports: dict[int, int] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

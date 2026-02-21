@@ -25,12 +25,6 @@ class State:
     def get(self, name: str) -> Orbit | None:
         return self.orbits.get(name)
 
-    def all_ports(self) -> set[int]:
-        ports: set[int] = set()
-        for orbit in self.orbits.values():
-            ports.update(orbit.ports.values())
-        return ports
-
 
 def load_state(path: Path | None = None) -> State:
     state_path = (path or STATE_PATH).expanduser()

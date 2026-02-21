@@ -33,7 +33,6 @@ DEFAULT_CONFIG_TEMPLATE = """\
 #     windows:
 #       - name: server
 #         command: npm run dev
-#         ports: [3000]       # optional — orbit tracks and remaps these
 #
 #   Multi-pane window (use `panes` for a split layout):
 #
@@ -50,14 +49,12 @@ DEFAULT_CONFIG_TEMPLATE = """\
 
 planets:
   # - name: myproject
-  #   path: ~/projects/myproject
-  #   worktree_base: ~/orbits/myproject
+  #   path: ~/projects/myproject    # worktrees are created as siblings
   #   env:                          # optional environment variables
   #     NODE_ENV: development
   #   windows:
   #     - name: server              # single-pane: just a command
   #       command: npm run dev
-  #       ports: [3000, 5173]
   #     - name: dev                 # multi-pane: split layout
   #       panes:
   #         - name: editor
@@ -117,15 +114,10 @@ def scaffold_planet(cwd: Path) -> Planet:
         path = f"~/{rel}"
     except ValueError:
         path = str(cwd)
-    worktree_base = f"~/orbits/{name}"
-    return Planet(name=name, path=path, worktree_base=worktree_base)
+    return Planet(name=name, path=path)
 
 
 def append_planet_to_config(planet: Planet, config_path: Path) -> None:
-    snippet = (
-        f"\n  - name: {planet.name}\n"
-        f"    path: {planet.path}\n"
-        f"    worktree_base: {planet.worktree_base}\n"
-    )
+    snippet = f"\n  - name: {planet.name}\n    path: {planet.path}\n"
     with open(config_path, "a") as f:
         f.write(snippet)

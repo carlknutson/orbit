@@ -1,21 +1,19 @@
-import json
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from orbit.config import Config
-from orbit.models import Orbit, Planet, Window
+from orbit.models import Orbit, Planet
 from orbit.session import start, stop
 from orbit.state import State, load_state
 from orbit.tmux import kill_session, session_exists
 
 
-def make_planet(repo_path: Path, worktree_base: Path, windows=None) -> Planet:
+def make_planet(repo_path: Path, windows=None) -> Planet:
     return Planet(
         name="My App",
         path=str(repo_path),
-        worktree_base=str(worktree_base),
         windows=windows or [],
     )
 
@@ -27,7 +25,7 @@ def make_config(planet: Planet) -> Config:
 @pytest.mark.integration
 class TestStart:
     def test_creates_tmux_session(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -51,7 +49,7 @@ class TestStart:
                 kill_session(orbit_name)
 
     def test_records_orbit_in_state(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -75,7 +73,7 @@ class TestStart:
                 kill_session("test-state")
 
     def test_creates_worktree_directory(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -89,37 +87,13 @@ class TestStart:
                 cwd=git_repo,
                 state_path=state_file,
             )
-            assert (tmp_path / "planets" / "test-wt").exists()
+            assert (git_repo.parent / "test-wt").exists()
         finally:
             if session_exists("test-wt"):
                 kill_session("test-wt")
 
-    def test_writes_ports_json(self, git_repo, tmp_path):
-        windows = [Window(name="server", command="echo hi", ports=[3000])]
-        planet = make_planet(git_repo, tmp_path / "planets", windows=windows)
-        config = make_config(planet)
-        state = State()
-        state_file = tmp_path / "state.json"
-
-        try:
-            start(
-                branch="feat",
-                name="test-ports",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
-            ports_file = tmp_path / "planets" / "test-ports" / ".orbit" / "ports.json"
-            assert ports_file.exists()
-            data = json.loads(ports_file.read_text())
-            assert "3000" in data
-        finally:
-            if session_exists("test-ports"):
-                kill_session("test-ports")
-
     def test_gitignore_has_orbit_entry(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -133,14 +107,14 @@ class TestStart:
                 cwd=git_repo,
                 state_path=state_file,
             )
-            gitignore = tmp_path / "planets" / "test-gi" / ".gitignore"
+            gitignore = git_repo.parent / "test-gi" / ".gitignore"
             assert ".orbit/" in gitignore.read_text().splitlines()
         finally:
             if session_exists("test-gi"):
                 kill_session("test-gi")
 
     def test_collision_with_live_session_raises(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -169,7 +143,7 @@ class TestStart:
                 kill_session("test-coll")
 
     def test_auto_numbered_on_default_name_collision(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -202,13 +176,13 @@ class TestStart:
                 kill_session("feat-2")
 
     def test_stale_orbit_raises(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         stale_orbit = Orbit(
             name="stale-orbit",
             planet=git_repo.name,
             branch="main",
-            worktree=str(tmp_path / "planets" / "stale-orbit"),
+            worktree=str(git_repo.parent / "stale-orbit"),
             tmux_session="stale-orbit",
         )
         state = State()
@@ -227,7 +201,7 @@ class TestStart:
 @pytest.mark.integration
 class TestStop:
     def test_stops_tmux_session(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -247,7 +221,7 @@ class TestStop:
         assert not session_exists("stop-test")
 
     def test_removes_worktree(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -260,7 +234,7 @@ class TestStop:
             cwd=git_repo,
             state_path=state_file,
         )
-        worktree_path = tmp_path / "planets" / "stop-wt"
+        worktree_path = git_repo.parent / "stop-wt"
         assert worktree_path.exists()
 
         state2 = load_state(state_file)
@@ -268,7 +242,7 @@ class TestStop:
         assert not worktree_path.exists()
 
     def test_removes_orbit_from_state(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
@@ -294,7 +268,7 @@ class TestStop:
             stop("nonexistent", state, state_file)
 
     def test_stop_stale_orbit_skips_kill(self, git_repo, tmp_path):
-        planet = make_planet(git_repo, tmp_path / "planets")
+        planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"

@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import click
@@ -6,7 +5,6 @@ import click
 from orbit import tmux, worktree
 from orbit.config import Config, detect_planet
 from orbit.models import Orbit
-from orbit.ports import assign_ports
 from orbit.state import State, save_state
 from orbit.worktree import WorktreeError
 
@@ -54,39 +52,18 @@ def start(
                 n += 1
             orbit_name = f"{branch_slug}-{n}"
 
-    worktree_base = Path(planet.worktree_base).expanduser()
+    worktree_base = Path(planet.path).expanduser().parent
     worktree_path = worktree_base / orbit_name
     worktree_base.mkdir(parents=True, exist_ok=True)
 
     worktree.create_worktree(cwd, worktree_path, branch, remote)
     worktree.ensure_gitignore_has_orbit(worktree_path)
 
-    declared_ports = [
-        p
-        for window in planet.windows
-        for p in [
-            *window.ports,
-            *(port for pane in window.panes for port in pane.ports),
-        ]
-    ]
-    port_map = assign_ports(declared_ports, state.all_ports())
-
-    orbit_dir = worktree_path / ".orbit"
-    orbit_dir.mkdir(exist_ok=True)
-    (orbit_dir / "ports.json").write_text(
-        json.dumps({str(k): v for k, v in port_map.items()}, indent=2)
-    )
-
     tmux.new_session(orbit_name, worktree_path)
 
     tmux.set_option(orbit_name, "mouse", "on")
-
-    port_display = "  ".join(f":{p}" for p in port_map.values()) if port_map else ""
-    status_right_parts = [branch]
-    if port_display:
-        status_right_parts.append(port_display)
     tmux.set_option(orbit_name, "status-left", f" {orbit_name} ")
-    tmux.set_option(orbit_name, "status-right", f" {' | '.join(status_right_parts)} ")
+    tmux.set_option(orbit_name, "status-right", f" {branch} ")
 
     for key, value in planet.env.items():
         tmux.set_environment(orbit_name, key, value)
@@ -99,18 +76,11 @@ def start(
         branch=branch,
         worktree=str(worktree_path),
         tmux_session=orbit_name,
-        ports=port_map,
     )
     state.add(orbit)
     save_state(state, state_path)
 
     click.echo(f"\nStarted {orbit_name}\n")
-    if port_map:
-        click.echo(f"  {'Port':<6}  Assigned")
-        for orig, assigned in port_map.items():
-            suffix = "  (reassigned)" if assigned != orig else ""
-            click.echo(f"  {orig:<6}  {assigned}{suffix}")
-        click.echo("\nPort map written to .orbit/ports.json")
 
     if tmux.inside_tmux():
         tmux.switch_client(orbit_name)

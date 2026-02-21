@@ -8,24 +8,20 @@ class TestPane:
         pane = Pane(name="shell")
         assert pane.command is None
         assert pane.directory == "."
-        assert pane.ports == []
 
-    def test_with_command_and_ports(self) -> None:
-        pane = Pane(name="ui", command="npm run dev", ports=[3000])
+    def test_with_command(self) -> None:
+        pane = Pane(name="ui", command="npm run dev")
         assert pane.command == "npm run dev"
-        assert pane.ports == [3000]
 
 
 class TestWindow:
     def test_defaults(self) -> None:
         window = Window(name="shell")
         assert window.command is None
-        assert window.ports == []
 
-    def test_with_command_and_ports(self) -> None:
-        window = Window(name="server", command="npm run dev", ports=[3000])
+    def test_with_command(self) -> None:
+        window = Window(name="server", command="npm run dev")
         assert window.command == "npm run dev"
-        assert window.ports == [3000]
 
     def test_window_with_panes(self) -> None:
         window = Window(name="editor", panes=[Pane(name="vim"), Pane(name="tests")])
@@ -35,21 +31,15 @@ class TestWindow:
 
 class TestPlanet:
     def test_slug_from_path(self) -> None:
-        planet = Planet(
-            name="My App", path="~/projects/myapp", worktree_base="~/planets"
-        )
+        planet = Planet(name="My App", path="~/projects/myapp")
         assert planet.slug == "myapp"
 
     def test_env_defaults_empty(self) -> None:
-        planet = Planet(
-            name="My App", path="~/projects/myapp", worktree_base="~/planets"
-        )
+        planet = Planet(name="My App", path="~/projects/myapp")
         assert planet.env == {}
 
     def test_description_optional(self) -> None:
-        planet = Planet(
-            name="My App", path="~/projects/myapp", worktree_base="~/planets"
-        )
+        planet = Planet(name="My App", path="~/projects/myapp")
         assert planet.description is None
 
 
@@ -59,30 +49,17 @@ class TestOrbit:
             name="myapp-auth-flow",
             planet="myapp",
             branch="feature/auth-flow",
-            worktree="/Users/you/planets/myapp-auth-flow",
+            worktree="/Users/you/projects/myapp/.worktrees/myapp-auth-flow",
             tmux_session="myapp-auth-flow",
         )
-        assert orbit.ports == {}
         assert orbit.created_at.tzinfo is not None
-
-    def test_ports_mapping(self) -> None:
-        orbit = Orbit(
-            name="myapp-main",
-            planet="myapp",
-            branch="main",
-            worktree="/Users/you/planets/myapp-main",
-            tmux_session="myapp-main",
-            ports={3000: 3001, 5432: 5432},
-        )
-        assert orbit.ports[3000] == 3001
-        assert orbit.ports[5432] == 5432
 
     def test_created_at_is_utc(self) -> None:
         orbit = Orbit(
             name="myapp-main",
             planet="myapp",
             branch="main",
-            worktree="/Users/you/planets/myapp-main",
+            worktree="/Users/you/projects/myapp/.worktrees/myapp-main",
             tmux_session="myapp-main",
         )
         assert orbit.created_at.tzinfo == timezone.utc

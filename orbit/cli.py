@@ -75,12 +75,11 @@ def list_cmd() -> None:
         click.echo("No active orbits.")
         return
 
-    headers = ("ORBIT", "PLANET", "BRANCH", "PORTS", "STATUS")
+    headers = ("ORBIT", "PLANET", "BRANCH", "STATUS")
     rows = []
     for orbit in state.orbits.values():
         status = "running" if tmux.session_exists(orbit.name) else "stale"
-        ports_str = ",".join(str(p) for p in orbit.ports.values())
-        rows.append((orbit.name, orbit.planet, orbit.branch, ports_str, status))
+        rows.append((orbit.name, orbit.planet, orbit.branch, status))
 
     widths = [
         max(len(headers[i]), max(len(r[i]) for r in rows))

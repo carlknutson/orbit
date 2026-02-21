@@ -50,16 +50,6 @@ class TestState:
         state = State()
         assert state.get("nonexistent") is None
 
-    def test_all_ports_empty(self):
-        state = State()
-        assert state.all_ports() == set()
-
-    def test_all_ports_across_orbits(self):
-        state = State()
-        state.add(make_orbit("myapp-main", ports={3000: 3000, 5432: 5432}))
-        state.add(make_orbit("myapp-feat", ports={3000: 3001, 5432: 5433}))
-        assert state.all_ports() == {3000, 5432, 3001, 5433}
-
 
 class TestLoadState:
     def test_returns_empty_state_when_file_missing(self, tmp_path):
@@ -68,13 +58,12 @@ class TestLoadState:
 
     def test_loads_orbits_from_file(self, tmp_path):
         state_file = tmp_path / "state.json"
-        orbit = make_orbit(ports={3000: 3001})
+        orbit = make_orbit()
         state_file.write_text(
             json.dumps({"orbits": {"myapp-main": json.loads(orbit.model_dump_json())}})
         )
         state = load_state(state_file)
         assert "myapp-main" in state.orbits
-        assert state.orbits["myapp-main"].ports == {3000: 3001}
 
     def test_invalid_json_raises(self, tmp_path):
         state_file = tmp_path / "state.json"
@@ -101,12 +90,11 @@ class TestSaveState:
     def test_saves_and_reloads(self, tmp_path):
         state_file = tmp_path / "state.json"
         state = State()
-        state.add(make_orbit(ports={3000: 3001}))
+        state.add(make_orbit())
         save_state(state, state_file)
 
         loaded = load_state(state_file)
         assert "myapp-main" in loaded.orbits
-        assert loaded.orbits["myapp-main"].ports == {3000: 3001}
 
     def test_creates_parent_directory(self, tmp_path):
         state_file = tmp_path / "nested" / "dir" / "state.json"
