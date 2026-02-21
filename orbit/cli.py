@@ -18,7 +18,7 @@ def cli() -> None:
 @cli.command()
 @click.argument("branch", required=False)
 @click.option("--name", "-n", help="Override the orbit name")
-def start(branch: str | None, name: str | None) -> None:
+def launch(branch: str | None, name: str | None) -> None:
     """Create a new orbit for the current planet."""
     from orbit import session as session_module
     from orbit.config import append_planet_to_config, detect_planet, scaffold_planet
@@ -33,12 +33,12 @@ def start(branch: str | None, name: str | None) -> None:
         append_planet_to_config(planet, DEFAULT_CONFIG_PATH.expanduser())
         config_path = DEFAULT_CONFIG_PATH.expanduser()
         click.echo(f"Added planet '{planet.name}' to {config_path}.")
-        click.echo("Review ~/.orbit/config.yaml and run 'orbit start' again.")
+        click.echo("Review ~/.orbit/config.yaml and run 'orbit launch' again.")
         return
 
     state = _load_state()
     try:
-        session_module.start(
+        session_module.launch(
             branch=branch,
             name=name,
             config=config,
@@ -50,9 +50,9 @@ def start(branch: str | None, name: str | None) -> None:
         raise click.ClickException(str(e))
 
 
-@cli.command("switch")
-def switch_cmd() -> None:
-    """Pick and switch to an orbit."""
+@cli.command("jump")
+def jump_cmd() -> None:
+    """Pick and jump to an orbit."""
     from orbit import tmux
 
     if tmux.inside_tmux():
@@ -93,13 +93,13 @@ def list_cmd() -> None:
 
 @cli.command()
 @click.argument("name", required=False)
-def stop(name: str | None) -> None:
-    """Stop an orbit and clean up its worktree."""
+def destroy(name: str | None) -> None:
+    """Destroy an orbit and clean up its worktree."""
     from orbit import session as session_module
 
     state = _load_state()
     orbit_name = resolve_name(name, state, prefix_match=False)
-    session_module.stop(
+    session_module.destroy(
         orbit_name=orbit_name,
         state=state,
         state_path=DEFAULT_STATE_PATH.expanduser(),
@@ -145,7 +145,7 @@ def keys_cmd() -> None:
         "\n"
         "  sessions\n"
         "    Ctrl-B d              detach — orbit keeps running\n"
-        "    orbit switch          pick and switch to an orbit\n"
+        "    orbit jump            pick and jump to an orbit\n"
         "    orbit list            see all running orbits\n"
         "\n"
         "  copy / paste\n"

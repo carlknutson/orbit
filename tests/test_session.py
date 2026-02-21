@@ -5,7 +5,7 @@ from click.testing import CliRunner
 
 from orbit.config import Config
 from orbit.models import Orbit, Planet
-from orbit.session import start, stop
+from orbit.session import destroy, launch
 from orbit.state import State, load_state
 from orbit.tmux import kill_session, session_exists
 
@@ -33,7 +33,7 @@ class TestStart:
         try:
             runner = CliRunner()
             with runner.isolated_filesystem():
-                start(
+                launch(
                     branch="feat",
                     name="test-orbit",
                     config=config,
@@ -54,7 +54,7 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name="test-state",
                 config=config,
@@ -78,7 +78,7 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name="test-wt",
                 config=config,
@@ -98,7 +98,7 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name="test-gi",
                 config=config,
@@ -119,7 +119,7 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name="test-coll",
                 config=config,
@@ -129,7 +129,7 @@ class TestStart:
             )
             state2 = load_state(state_file)
             with pytest.raises(Exception, match="already exists"):
-                start(
+                launch(
                     branch="feat2",
                     name="test-coll",
                     config=config,
@@ -160,7 +160,7 @@ class TestStart:
         )
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name=None,
                 config=config,
@@ -182,7 +182,7 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            start(
+            launch(
                 branch="feat",
                 name="test-sync",
                 config=config,
@@ -211,7 +211,7 @@ class TestStart:
         state.add(stale_orbit)
 
         with pytest.raises(Exception, match="stale"):
-            start(
+            launch(
                 branch="feat",
                 name="stale-orbit",
                 config=config,
@@ -221,14 +221,14 @@ class TestStart:
 
 
 @pytest.mark.integration
-class TestStop:
-    def test_stops_tmux_session(self, git_repo, tmp_path):
+class TestDestroy:
+    def test_destroys_tmux_session(self, git_repo, tmp_path):
         planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
 
-        start(
+        launch(
             branch="feat",
             name="stop-test",
             config=config,
@@ -239,7 +239,7 @@ class TestStop:
         assert session_exists("stop-test")
 
         state2 = load_state(state_file)
-        stop("stop-test", state2, state_file)
+        destroy("stop-test", state2, state_file)
         assert not session_exists("stop-test")
 
     def test_removes_worktree(self, git_repo, tmp_path):
@@ -248,7 +248,7 @@ class TestStop:
         state = State()
         state_file = tmp_path / "state.json"
 
-        start(
+        launch(
             branch="feat",
             name="stop-wt",
             config=config,
@@ -260,7 +260,7 @@ class TestStop:
         assert worktree_path.exists()
 
         state2 = load_state(state_file)
-        stop("stop-wt", state2, state_file)
+        destroy("stop-wt", state2, state_file)
         assert not worktree_path.exists()
 
     def test_removes_orbit_from_state(self, git_repo, tmp_path):
@@ -269,7 +269,7 @@ class TestStop:
         state = State()
         state_file = tmp_path / "state.json"
 
-        start(
+        launch(
             branch="feat",
             name="stop-state",
             config=config,
@@ -278,24 +278,24 @@ class TestStop:
             state_path=state_file,
         )
         state2 = load_state(state_file)
-        stop("stop-state", state2, state_file)
+        destroy("stop-state", state2, state_file)
 
         state3 = load_state(state_file)
         assert "stop-state" not in state3.orbits
 
-    def test_stop_nonexistent_orbit_raises(self, tmp_path):
+    def test_destroy_nonexistent_orbit_raises(self, tmp_path):
         state = State()
         state_file = tmp_path / "state.json"
         with pytest.raises(Exception, match="No orbit named"):
-            stop("nonexistent", state, state_file)
+            destroy("nonexistent", state, state_file)
 
-    def test_stop_stale_orbit_skips_kill(self, git_repo, tmp_path):
+    def test_destroy_stale_orbit_skips_kill(self, git_repo, tmp_path):
         planet = make_planet(git_repo)
         config = make_config(planet)
         state = State()
         state_file = tmp_path / "state.json"
 
-        start(
+        launch(
             branch="feat",
             name="stale-stop",
             config=config,
@@ -306,7 +306,7 @@ class TestStop:
         kill_session("stale-stop")
 
         state2 = load_state(state_file)
-        stop("stale-stop", state2, state_file)
+        destroy("stale-stop", state2, state_file)
 
         state3 = load_state(state_file)
         assert "stale-stop" not in state3.orbits

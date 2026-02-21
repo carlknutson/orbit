@@ -92,18 +92,18 @@ class TestCliCommands:
         assert result.exit_code == 0
         assert "Orbit" in result.output
 
-    def test_start_help(self):
+    def test_launch_help(self):
         from orbit.cli import cli
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["start", "--help"])
+        result = runner.invoke(cli, ["launch", "--help"])
         assert result.exit_code == 0
 
-    def test_switch_help(self):
+    def test_jump_help(self):
         from orbit.cli import cli
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["switch", "--help"])
+        result = runner.invoke(cli, ["jump", "--help"])
         assert result.exit_code == 0
 
     def test_list_help(self):
@@ -113,11 +113,11 @@ class TestCliCommands:
         result = runner.invoke(cli, ["list", "--help"])
         assert result.exit_code == 0
 
-    def test_stop_help(self):
+    def test_destroy_help(self):
         from orbit.cli import cli
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["stop", "--help"])
+        result = runner.invoke(cli, ["destroy", "--help"])
         assert result.exit_code == 0
 
     def test_list_no_orbits(self, tmp_path, monkeypatch):
@@ -144,27 +144,27 @@ class TestCliCommands:
         assert result.exit_code == 0
         assert "myapp-main" in result.output
 
-    def test_stop_no_orbits_exits_with_error(self, tmp_path, monkeypatch):
+    def test_destroy_no_orbits_exits_with_error(self, tmp_path, monkeypatch):
         from orbit.cli import cli
 
         state_file = tmp_path / "state.json"
         monkeypatch.setattr("orbit.cli.DEFAULT_STATE_PATH", state_file)
         runner = CliRunner()
-        result = runner.invoke(cli, ["stop"])
+        result = runner.invoke(cli, ["destroy"])
         assert result.exit_code != 0
 
-    def test_switch_outside_tmux_no_orbits_raises(self, tmp_path, monkeypatch):
+    def test_jump_outside_tmux_no_orbits_raises(self, tmp_path, monkeypatch):
         from orbit.cli import cli
 
         state_file = tmp_path / "state.json"
         monkeypatch.setattr("orbit.cli.DEFAULT_STATE_PATH", state_file)
         monkeypatch.delenv("TMUX", raising=False)
         runner = CliRunner()
-        result = runner.invoke(cli, ["switch"])
+        result = runner.invoke(cli, ["jump"])
         assert result.exit_code != 0
         assert "No active orbits" in result.output
 
-    def test_switch_outside_tmux_opens_chooser(self, tmp_path, monkeypatch):
+    def test_jump_outside_tmux_opens_chooser(self, tmp_path, monkeypatch):
         from orbit.cli import cli
         from orbit.state import save_state
 
@@ -178,6 +178,6 @@ class TestCliCommands:
         monkeypatch.setattr("orbit.tmux.attach_and_choose", lambda: called.append(True))
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["switch"])
+        result = runner.invoke(cli, ["jump"])
         assert result.exit_code == 0
         assert called

@@ -114,7 +114,7 @@ def create_worktree(
             location = f" at {match.group(1)}" if match else ""
             raise WorktreeError(
                 f"Branch '{branch}' is already checked out{location}. "
-                f"Run 'orbit start <new-branch>' to start on a different branch."
+                f"Run 'orbit launch <new-branch>' to start on a different branch."
             )
         raise WorktreeError(f"Failed to create worktree: {stderr}")
 

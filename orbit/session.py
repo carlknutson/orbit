@@ -9,7 +9,7 @@ from orbit.state import State, save_state
 from orbit.worktree import WorktreeError
 
 
-def start(
+def launch(
     branch: str | None,
     name: str | None,
     config: Config,
@@ -36,13 +36,13 @@ def start(
                 raise click.ClickException(
                     f"An orbit named '{orbit_name}' already exists. "
                     f"Use a different --name, "
-                    f"or 'orbit stop {orbit_name}' to tear it down first."
+                    f"or 'orbit destroy {orbit_name}' to tear it down first."
                 )
             else:
                 raise click.ClickException(
                     f"An orbit named '{orbit_name}' exists but its tmux session is no "
                     f"longer live (stale). "
-                    f"Run 'orbit stop {orbit_name}' to clean it up first."
+                    f"Run 'orbit destroy {orbit_name}' to clean it up first."
                 )
     else:
         orbit_name = branch_slug
@@ -92,7 +92,7 @@ def start(
     state.add(orbit)
     save_state(state, state_path)
 
-    click.echo(f"\nStarted {orbit_name}\n")
+    click.echo(f"\nLaunched {orbit_name}\n")
 
     if tmux.inside_tmux():
         tmux.switch_client(orbit_name)
@@ -100,7 +100,7 @@ def start(
         tmux.attach_session(orbit_name)
 
 
-def stop(
+def destroy(
     orbit_name: str,
     state: State,
     state_path: Path | None = None,
@@ -129,4 +129,4 @@ def stop(
 
     state.remove(orbit_name)
     save_state(state, state_path)
-    click.echo(f"Stopped {orbit_name}")
+    click.echo(f"Destroyed {orbit_name}")

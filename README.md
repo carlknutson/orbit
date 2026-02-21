@@ -1,5 +1,5 @@
 # orbit
-CLI tool for managing tmux-based development workspaces — start, switch, and track feature contexts with a single command.
+CLI tool for managing tmux-based development workspaces — launch, jump, and track feature contexts with a single command.
 
 ## Installation
 

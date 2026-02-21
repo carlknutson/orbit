@@ -9,7 +9,7 @@ Orbit is a CLI tool for spinning up isolated local development environments that
 ## Core Concepts
 
 - **Orbit** — A fully isolated development environment: one git worktree + its running panes + its claimed ports. Multiple orbits can run simultaneously across branches and planets (codebases). Each orbit has a unique **name** that is its identity across all commands.
-- **Orbit name** — The stable identifier for an orbit. Defaults to `{planet_slug}-{branch_slug}` (e.g. `myapp-auth-flow`), but can be overridden on `orbit start` via `--name`. This name is the tmux session name, the state key, and the argument accepted by all other commands.
+- **Orbit name** — The stable identifier for an orbit. Defaults to `{planet_slug}-{branch_slug}` (e.g. `myapp-auth-flow`), but can be overridden on `orbit launch` via `--name`. This name is the tmux session name, the state key, and the argument accepted by all other commands.
 - **Planet** — A codebase registered in `~/.orbit/config.yaml` with its path, pane definitions, and port declarations.
 - **Planet slug** — The basename of the planet's `path` (e.g. `~/projects/myapp` → `myapp`). Used in default orbit names and worktree paths. If two planets share a basename, the slug suffix is assigned by YAML array index at first use and stored in state — reordering the config YAML will not silently rename existing orbits (e.g. `myapp`, `myapp-2`).
 - **Pane** — A tmux pane running a specific process within an orbit (e.g. docker, ui server, shell).
@@ -24,21 +24,21 @@ Each orbit is a **single tmux window with multiple panes** laid out in a grid. T
 
 | Command | Description |
 |---|---|
-| `orbit start [branch] [--name <name>]` | Creates worktree, starts all panes, and claims ports |
+| `orbit launch [branch] [--name <name>]` | Creates worktree, starts all panes, and claims ports |
 | `orbit attach [name]` | Attaches to a running orbit's tmux session (from outside tmux) |
-| `orbit switch [name]` | Switches the active tmux client to another orbit (from inside tmux) |
+| `orbit jump [name]` | Switches the active tmux client to another orbit (from inside tmux) |
 | `orbit list` | Lists all active orbits |
-| `orbit stop [name]` | Kills the orbit, releases ports, and removes the worktree |
+| `orbit destroy [name]` | Kills the orbit, releases ports, and removes the worktree |
 
-`orbit start` is the only command that requires CWD to be within a planet's directory — it needs to detect the planet and git repository. All other commands operate on orbit names and work from any directory.
+`orbit launch` is the only command that requires CWD to be within a planet's directory — it needs to detect the planet and git repository. All other commands operate on orbit names and work from any directory.
 
-**Name resolution** for `orbit attach`, `orbit switch`, and `orbit stop`:
+**Name resolution** for `orbit attach`, `orbit jump`, and `orbit destroy`:
 - If a name is provided, use it directly
 - If omitted and one orbit is active: act on it, printing which one
 - If omitted and multiple orbits are active: show a numbered prompt listing orbit names
 - If omitted and no orbits are active: exit with an error
 
-Prefix matching (resolving a partial name to the full orbit name) is supported only by `orbit switch`. `orbit attach` and `orbit stop` require an exact orbit name.
+Prefix matching (resolving a partial name to the full orbit name) is supported only by `orbit jump`. `orbit attach` and `orbit destroy` require an exact orbit name.
 
 ---
 
@@ -85,7 +85,7 @@ planets:
         directory: "."
 ```
 
-- `ports` declares the standard dev ports a pane uses locally. Orbit uses these as the starting point for port assignment on `orbit start` — assigning the same port if free, or the next unclaimed one if not.
+- `ports` declares the standard dev ports a pane uses locally. Orbit uses these as the starting point for port assignment on `orbit launch` — assigning the same port if free, or the next unclaimed one if not.
 - `directory` values are relative to the orbit's worktree root.
 - `env` values are injected into all panes of the orbit via `tmux set-environment`, called before any panes are created so all panes inherit the values.
 
@@ -93,9 +93,9 @@ planets:
 
 ## Planet Detection
 
-`orbit start` detects the planet by matching CWD against each planet's `path` in config (including subdirectories). If the CWD does not match any registered planet, Orbit exits with a clear error listing configured planets.
+`orbit launch` detects the planet by matching CWD against each planet's `path` in config (including subdirectories). If the CWD does not match any registered planet, Orbit exits with a clear error listing configured planets.
 
-All other commands (`stop`, `attach`, `switch`, `list`) work from any directory — they look up orbits by name in state and do not require a planet directory.
+All other commands (`destroy`, `attach`, `jump`, `list`) work from any directory — they look up orbits by name in state and do not require a planet directory.
 
 ---
 
@@ -115,8 +115,8 @@ Examples: `feature/auth-flow` → `feature-auth-flow`, `bugfix/auth-flow` → `b
 Preserving the full branch path in the slug ensures that branches like `feature/auth-flow` and `bugfix/auth-flow` produce distinct slugs and never collide.
 
 If the resulting default name (`{planet_slug}-{branch_slug}`) collides with an existing orbit, Orbit checks whether that orbit's tmux session is live:
-- If live: `"An orbit named '{name}' already exists. Use --name to assign a unique name, or 'orbit stop {name}' to tear it down first."`
-- If stale: `"An orbit named '{name}' exists but its tmux session is no longer live (stale). Run 'orbit stop {name}' to clean it up first."`
+- If live: `"An orbit named '{name}' already exists. Use --name to assign a unique name, or 'orbit destroy {name}' to tear it down first."`
+- If stale: `"An orbit named '{name}' exists but its tmux session is no longer live (stale). Run 'orbit destroy {name}' to clean it up first."`
 
 The `--name` flag is the escape hatch for live collisions.
 
@@ -124,7 +124,7 @@ The `--name` flag is the escape hatch for live collisions.
 
 ## Key Behaviours
 
-**Orbit start (`orbit start [branch] [--name <name>]`)**
+**Orbit launch (`orbit launch [branch] [--name <name>]`)**
 - Requires CWD to be within a planet's directory — exits with a clear error listing configured planets if no match is found
 - Requires a git repository in CWD — exits with a clear error if none is found
 - Auto-detects branch from the CWD git repo if not provided
@@ -150,30 +150,30 @@ The `--name` flag is the escape hatch for live collisions.
 
 **Orbit attach vs. switch**
 - `orbit attach` is for entering an orbit from a plain terminal — it runs `tmux attach-session -t {name}`
-- `orbit switch` is for jumping between orbits while already inside tmux — it runs `tmux switch-client -t {name}`, keeping you in the same terminal window
+- `orbit jump` is for jumping between orbits while already inside tmux — it runs `tmux switch-client -t {name}`, keeping you in the same terminal window
 - Both use the same name-resolution logic (explicit name, single active, numbered prompt, or error)
 
 **Orbit attach (`orbit attach [name]`)**
-- If run from inside an existing tmux session, prints a warning: `"You are inside a tmux session. Use 'orbit switch' to jump between orbits without nesting sessions."` Then proceeds with the attach anyway (tmux supports nested sessions).
+- If run from inside an existing tmux session, prints a warning: `"You are inside a tmux session. Use 'orbit jump' to jump between orbits without nesting sessions."` Then proceeds with the attach anyway (tmux supports nested sessions).
 
-**Orbit switch (`orbit switch [name]`)**
+**Orbit jump (`orbit jump [name]`)**
 - Resolves the target orbit using the standard name-resolution logic
-- Supports prefix matching against the orbit name (session slug): `orbit switch auth` resolves unambiguously to `myapp-auth-flow` if it is the only match; shows the numbered prompt if ambiguous
+- Supports prefix matching against the orbit name (session slug): `orbit jump auth` resolves unambiguously to `myapp-auth-flow` if it is the only match; shows the numbered prompt if ambiguous
 - Calls `tmux switch-client -t {name}` to move the current tmux client to the target orbit's session instantly
 - Exits with a clear error if not currently inside a tmux session (use `orbit attach` instead)
 
-**Orbit stop (`orbit stop [name]`)**
+**Orbit destroy (`orbit destroy [name]`)**
 - Checks whether the tmux session is live; if not, skips the kill step and proceeds with cleanup
 - Kills the tmux session and all panes (if live)
 - Releases claimed ports from state
 - Removes the git worktree if it exists; skips removal with a notice if the worktree directory is missing (already cleaned up manually)
 - Prompts for confirmation before removing the worktree if `git status --short` returns any output (includes modified, staged, and untracked files)
 - Removes the orbit entry from state
-- Stale orbits (tmux session no longer exists) are cleaned up through `orbit stop` — their state entry and port claims are released as part of normal stop processing
+- Stale orbits (tmux session no longer exists) are cleaned up through `orbit destroy` — their state entry and port claims are released as part of normal stop processing
 
 **Port assignment**
 
-Orbit owns port allocation. Each planet declares its standard dev ports in config — the ports the project normally uses locally. On `orbit start`, Orbit checks each candidate port against two sources and increments until both pass:
+Orbit owns port allocation. Each planet declares its standard dev ports in config — the ports the project normally uses locally. On `orbit launch`, Orbit checks each candidate port against two sources and increments until both pass:
 
 1. Ports claimed by active orbits in `~/.orbit/state.json` (across all planets)
 2. OS-level socket availability (a `socket.bind()` probe) — catches ports held by non-orbit processes
@@ -190,7 +190,7 @@ The result is written to `.orbit/ports.json` in the worktree root as a flat old�
 
 Ports that were free retain their original value.
 
-On `orbit start`, the assignment is also printed directly:
+On `orbit launch`, the assignment is also printed directly:
 
 ```
 Started myapp-auth-flow
@@ -205,7 +205,7 @@ Port map written to .orbit/ports.json
 
 - Ports are recorded in `~/.orbit/state.json` as assigned (not declared) values
 - `orbit list` shows assigned ports per orbit
-- Ports are released on `orbit stop`
+- Ports are released on `orbit destroy`
 
 > **Note:** Orbit guarantees each orbit receives unique port assignments and records them in `ports.json`. The application processes running in each pane (e.g., `npm run dev`, `docker-compose up`) are responsible for reading `ports.json` and binding to the assigned ports — not their hardcoded defaults. Without this, Orbit prevents port-claim collisions between orbits, but the processes themselves may still attempt to bind to conflicting ports.
 
