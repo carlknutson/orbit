@@ -59,6 +59,18 @@ def start(
     worktree.create_worktree(cwd, worktree_path, branch, remote)
     worktree.ensure_gitignore_has_orbit(worktree_path)
 
+    patterns = planet.sync_untracked
+    if patterns is None:
+        patterns = ["*", ".*"]
+    if patterns:
+        synced = worktree.sync_untracked_to_worktree(
+            Path(planet.path).expanduser(),
+            worktree_path,
+            patterns,
+        )
+        if synced:
+            click.echo(f"Synced {len(synced)} untracked path(s) into worktree")
+
     tmux.new_session(orbit_name, worktree_path)
 
     tmux.set_option(orbit_name, "mouse", "on")

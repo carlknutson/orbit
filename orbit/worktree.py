@@ -1,4 +1,5 @@
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -153,6 +154,48 @@ def has_uncommitted_changes(worktree_path: Path) -> bool:
         text=True,
     )
     return bool(result.stdout.strip())
+
+
+def sync_untracked_to_worktree(
+    source_path: Path,
+    worktree_path: Path,
+    patterns: list[str],
+) -> list[str]:
+    """Sync untracked files matching patterns from source into worktree.
+
+    Dotfiles (name starts with '.') are symlinked for live-shared state.
+    All other paths (e.g. node_modules) are copied for isolation.
+    Git-tracked files are skipped — they're already in the worktree.
+    """
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=source_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    tracked = set(result.stdout.splitlines())
+
+    synced: list[str] = []
+    for pattern in patterns:
+        for src in source_path.glob(pattern):
+            rel = src.relative_to(source_path)
+            if str(rel) in tracked:
+                continue
+            dst = worktree_path / rel
+            if dst.exists() or dst.is_symlink():
+                continue
+            if src.name == ".git":
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if src.name.startswith("."):
+                dst.symlink_to(src.resolve())
+            elif src.is_dir():
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
+            synced.append(str(rel))
+    return synced
 
 
 def ensure_gitignore_has_orbit(worktree_path: Path) -> None:

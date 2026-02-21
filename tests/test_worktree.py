@@ -13,6 +13,7 @@ from orbit.worktree import (
     has_uncommitted_changes,
     remove_worktree,
     slugify,
+    sync_untracked_to_worktree,
 )
 
 
@@ -190,6 +191,88 @@ class TestHasUncommittedChanges:
             ["git", "add", "."], cwd=git_repo, check=True, capture_output=True
         )
         assert has_uncommitted_changes(git_repo)
+
+
+@pytest.mark.integration
+class TestSyncUntrackedToWorktree:
+    def test_symlinks_dotfile(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("SECRET=123\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".env"])
+        assert synced == [".env"]
+        dst = worktree_path / ".env"
+        assert dst.is_symlink()
+        assert dst.resolve() == (git_repo / ".env").resolve()
+
+    def test_symlink_reflects_source_changes(self, git_repo, tmp_path):
+        env_file = git_repo / ".env"
+        env_file.write_text("SECRET=original\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        sync_untracked_to_worktree(git_repo, worktree_path, [".env"])
+        env_file.write_text("SECRET=updated\n")
+        assert (worktree_path / ".env").read_text() == "SECRET=updated\n"
+
+    def test_copies_non_dotfile_directory(self, git_repo, tmp_path):
+        node_modules = git_repo / "node_modules"
+        node_modules.mkdir()
+        (node_modules / "pkg.js").write_text("module.exports = {}\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, ["node_modules"])
+        assert synced == ["node_modules"]
+        dst = worktree_path / "node_modules"
+        assert dst.is_dir()
+        assert not dst.is_symlink()
+        assert (dst / "pkg.js").exists()
+
+    def test_copies_non_dotfile_regular_file(self, git_repo, tmp_path):
+        (git_repo / "build.log").write_text("ok\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, ["build.log"])
+        assert synced == ["build.log"]
+        dst = worktree_path / "build.log"
+        assert dst.is_file()
+        assert not dst.is_symlink()
+
+    def test_skips_git_tracked_files(self, git_repo, tmp_path):
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, ["README.md"])
+        assert synced == []
+
+    def test_skips_already_existing_destination(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("A=1\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        (worktree_path / ".env").write_text("already here\n")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".env"])
+        assert synced == []
+
+    def test_no_match_returns_empty(self, git_repo, tmp_path):
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".env"])
+        assert synced == []
+
+    def test_skips_git_directory(self, git_repo, tmp_path):
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, ["*", ".*"])
+        assert ".git" not in synced
+        assert not (worktree_path / ".git").is_symlink()
+
+    def test_glob_pattern_matches_multiple(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("A=1\n")
+        (git_repo / ".env.local").write_text("B=2\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".env*"])
+        assert sorted(synced) == [".env", ".env.local"]
+        assert (worktree_path / ".env").is_symlink()
+        assert (worktree_path / ".env.local").is_symlink()
 
 
 class TestEnsureGitignoreHasOrbit:

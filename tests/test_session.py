@@ -10,12 +10,11 @@ from orbit.state import State, load_state
 from orbit.tmux import kill_session, session_exists
 
 
-def make_planet(repo_path: Path, windows=None) -> Planet:
-    return Planet(
-        name="My App",
-        path=str(repo_path),
-        windows=windows or [],
-    )
+def make_planet(repo_path: Path, windows=None, sync_untracked=None) -> Planet:
+    kwargs: dict = {"name": "My App", "path": str(repo_path), "windows": windows or []}
+    if sync_untracked is not None:
+        kwargs["sync_untracked"] = sync_untracked
+    return Planet(**kwargs)
 
 
 def make_config(planet: Planet) -> Config:
@@ -174,6 +173,29 @@ class TestStart:
         finally:
             if session_exists("feat-2"):
                 kill_session("feat-2")
+
+    def test_sync_untracked_creates_symlink_for_dotfile(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("SECRET=abc\n")
+        planet = make_planet(git_repo, sync_untracked=[".env"])
+        config = make_config(planet)
+        state = State()
+        state_file = tmp_path / "state.json"
+
+        try:
+            start(
+                branch="feat",
+                name="test-sync",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+            dst = git_repo.parent / "test-sync" / ".env"
+            assert dst.is_symlink()
+            assert dst.resolve() == (git_repo / ".env").resolve()
+        finally:
+            if session_exists("test-sync"):
+                kill_session("test-sync")
 
     def test_stale_orbit_raises(self, git_repo, tmp_path):
         planet = make_planet(git_repo)

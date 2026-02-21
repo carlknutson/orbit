@@ -42,6 +42,14 @@ class TestPlanet:
         planet = Planet(name="My App", path="~/projects/myapp")
         assert planet.description is None
 
+    def test_sync_untracked_defaults_to_none(self) -> None:
+        planet = Planet(name="My App", path="~/projects/myapp")
+        assert planet.sync_untracked is None
+
+    def test_sync_untracked_accepts_list(self) -> None:
+        planet = Planet(name="My App", path="~/projects/myapp", sync_untracked=[".env"])
+        assert planet.sync_untracked == [".env"]
+
 
 class TestOrbit:
     def test_defaults(self) -> None:

@@ -22,6 +22,7 @@ class Planet(BaseModel):
     description: str | None = None
     env: dict[str, str] = Field(default_factory=dict)
     windows: list[Window] = Field(default_factory=list)
+    sync_untracked: list[str] | None = None
 
     @property
     def slug(self) -> str:
