@@ -38,11 +38,11 @@ def launch(branch: str | None, name: str | None, base: str | None) -> None:
         detect_planet(cwd, config)
     except ConfigError:
         planet = scaffold_planet(cwd)
-        append_planet_to_config(planet, DEFAULT_CONFIG_PATH.expanduser())
         config_path = DEFAULT_CONFIG_PATH.expanduser()
-        click.echo(f"Added planet '{planet.name}' to {config_path}.")
-        click.echo("Review ~/.orbit/config.yaml and run 'orbit launch' again.")
-        return
+        append_planet_to_config(planet, config_path)
+        click.echo(f"Added '{planet.name}' to {config_path} — review and save.")
+        click.edit(filename=str(config_path))
+        config = _load_config()
 
     state = _load_state()
     try:
@@ -55,7 +55,7 @@ def launch(branch: str | None, name: str | None, base: str | None) -> None:
             state_path=DEFAULT_STATE_PATH.expanduser(),
             base=base,
         )
-    except WorktreeError as e:
+    except (WorktreeError, ConfigError) as e:
         raise click.ClickException(str(e))
 
 
@@ -142,6 +142,8 @@ def keys_cmd() -> None:
         "  navigating windows\n"
         "    Ctrl-B 1-9            jump to window by number\n"
         "    Ctrl-B n / p          next / previous window\n"
+        "    Ctrl-B l              last (most recently used) window\n"
+        "    Ctrl-B w              interactive window list\n"
         "\n"
         "  navigating panes\n"
         "    Ctrl-B arrow          move focus to another pane\n"
@@ -154,6 +156,9 @@ def keys_cmd() -> None:
         "\n"
         "  sessions\n"
         "    Ctrl-B d              detach — orbit keeps running\n"
+        "    Ctrl-B s              interactive session list\n"
+        "    Ctrl-B ( / )          previous / next session\n"
+        "    Ctrl-B L              last (most recently used) session\n"
         "    orbit jump            pick and jump to an orbit\n"
         "    orbit list            see all running orbits\n"
         "    orbit destroy         tear down orbit + worktree (run from any shell)\n"
