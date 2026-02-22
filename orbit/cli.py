@@ -149,6 +149,8 @@ def keys_cmd() -> None:
         "    Ctrl-B d              detach — orbit keeps running\n"
         "    orbit jump            pick and jump to an orbit\n"
         "    orbit list            see all running orbits\n"
+        "    orbit destroy         tear down orbit + worktree (run from any shell)\n"
+        "    Ctrl-B :kill-session  kill current tmux session without cleaning up\n"
         "\n"
         "  copy / paste\n"
         "    Ctrl-B [              enter copy mode\n"
