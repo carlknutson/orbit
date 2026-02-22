@@ -10,7 +10,14 @@ DEFAULT_CONFIG_PATH = Path("~/.orbit/config.yaml")
 DEFAULT_STATE_PATH = Path("~/.orbit/state.json")
 
 
-@click.group()
+class DefaultLaunchGroup(click.Group):
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        if args and not args[0].startswith("-") and args[0] not in self.commands:
+            args = ["launch"] + args
+        return super().parse_args(ctx, args)
+
+
+@click.group(cls=DefaultLaunchGroup)
 def cli() -> None:
     """Orbit — parallel local development environments."""
 

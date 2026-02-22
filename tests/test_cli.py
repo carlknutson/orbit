@@ -99,6 +99,15 @@ class TestCliCommands:
         result = runner.invoke(cli, ["launch", "--help"])
         assert result.exit_code == 0
 
+    def test_implicit_launch_routes_branch_arg_to_launch(self):
+        from orbit.cli import cli
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["some-branch", "--help"])
+        assert result.exit_code == 0
+        assert "No such command" not in result.output
+        assert "Create a new orbit" in result.output
+
     def test_jump_help(self):
         from orbit.cli import cli
 
