@@ -1,5 +1,45 @@
 # orbit
-CLI tool for managing tmux-based development workspaces — launch, jump, and track feature contexts with a single command.
+
+CLI tool for isolated, tmux-based development environments — one per branch, each with its own worktree, running simultaneously.
+
+## First run
+
+Run `orbit` from any repo. Orbit detects the project, adds it to config, and opens your editor so you can review before anything is created. No YAML required upfront to try it.
+
+## Usage
+
+```bash
+orbit [branch]          # launch an orbit for the current project; --from <base> to set the base branch
+orbit jump              # pick and attach to an orbit (works inside or outside tmux)
+orbit list              # list all active orbits with status
+orbit destroy [name]    # tear down an orbit and remove its worktree
+orbit config            # open ~/.orbit/config.yaml in $EDITOR
+orbit keys              # print a tmux cheat sheet for orbit sessions
+```
+
+## Configuration
+
+`~/.orbit/config.yaml` — one entry per project:
+
+```yaml
+planets:
+  - name: myproject
+    path: ~/projects/myproject
+    env:                        # optional environment variables
+      NODE_ENV: development
+    windows:
+      - name: server            # single-pane: just a command
+        command: npm run dev
+      - name: dev               # multi-pane: split layout
+        panes:
+          - name: editor
+            command: vim .
+          - name: tests
+            command: pytest --watch
+      - name: shell             # empty window — just a shell
+```
+
+Worktrees are created automatically as siblings of `path` (e.g. `~/projects/myproject.wt/my-branch`). No extra config needed.
 
 ## Installation
 
@@ -44,19 +84,4 @@ uv run ruff format .
 
 # Type check
 uv run mypy .
-```
-
-## Configuration
-
-On first run, orbit creates `~/.orbit/config.yaml` with a commented template. Edit it to add your projects:
-
-```yaml
-planets:
-  - name: myproject
-    path: ~/projects/myproject
-    worktree_base: ~/orbits/myproject
-    panes:
-      - name: server
-        command: npm run dev
-        ports: [3000]
 ```

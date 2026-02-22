@@ -80,27 +80,6 @@ chore: add pyproject.toml and package scaffolding
 - Description is lowercase, no trailing period
 - Body is optional — use it for non-obvious reasoning, not to restate the diff
 
-## Build Sequence
-
-Work through these in order. Each step builds on the previous.
-
-1. **Project scaffolding** — `pyproject.toml`, package structure, empty module stubs
-2. **Models** — Pydantic models (`Planet`, `Pane`, `Orbit`)
-3. **Config** — parse/validate `~/.orbit/config.yaml`
-   - ✅ Test + commit
-4. **State** — read/write `~/.orbit/state.json`
-   - ✅ Test + commit
-5. **Ports** — port assignment algorithm
-   - ✅ Test + commit
-6. **Worktree** — git subprocess calls
-7. **Tmux** — tmux subprocess wrapper
-8. **Session** — orbit lifecycle, ties everything together
-   - ✅ Test + commit
-9. **CLI** — Click commands, name resolution, output formatting
-   - ✅ Test + commit
-
-Remove this section once the implementation is complete.
-
 ## Future
 
 Features intentionally deferred — pick these up when the time is right:
