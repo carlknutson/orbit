@@ -56,14 +56,17 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            launch(
-                branch="feat",
-                name="test-state",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name="test-state",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             saved = load_state(state_file)
             assert "test-state" in saved.orbits
             orbit = saved.orbits["test-state"]
@@ -80,14 +83,17 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            launch(
-                branch="feat",
-                name="test-wt",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name="test-wt",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             assert (git_repo.parent / f"{git_repo.name}.wt" / "test-wt").exists()
         finally:
             if session_exists("test-wt"):
@@ -100,14 +106,17 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            launch(
-                branch="feat",
-                name="test-gi",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name="test-gi",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             wt_dir = git_repo.parent / f"{git_repo.name}.wt" / "test-gi"
             gitignore = wt_dir / ".gitignore"
             assert ".orbit/" in gitignore.read_text().splitlines()
@@ -122,14 +131,17 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            launch(
-                branch="feat",
-                name="test-coll",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name="test-coll",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             state2 = load_state(state_file)
             with pytest.raises(Exception, match="already exists"):
                 launch(
@@ -163,14 +175,17 @@ class TestStart:
         )
 
         try:
-            launch(
-                branch="feat",
-                name=None,
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name=None,
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             saved = load_state(state_file)
             assert "feat-2" in saved.orbits
         finally:
@@ -185,14 +200,17 @@ class TestStart:
         state_file = tmp_path / "state.json"
 
         try:
-            launch(
-                branch="feat",
-                name="test-sync",
-                config=config,
-                state=state,
-                cwd=git_repo,
-                state_path=state_file,
-            )
+            try:
+                launch(
+                    branch="feat",
+                    name="test-sync",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
             dst = git_repo.parent / f"{git_repo.name}.wt" / "test-sync" / ".env"
             assert dst.is_symlink()
             assert dst.resolve() == (git_repo / ".env").resolve()
@@ -301,14 +319,17 @@ class TestDestroy:
         state = State()
         state_file = tmp_path / "state.json"
 
-        launch(
-            branch="feat",
-            name="stop-test",
-            config=config,
-            state=state,
-            cwd=git_repo,
-            state_path=state_file,
-        )
+        try:
+            launch(
+                branch="feat",
+                name="stop-test",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
         assert session_exists("stop-test")
 
         state2 = load_state(state_file)
@@ -321,14 +342,17 @@ class TestDestroy:
         state = State()
         state_file = tmp_path / "state.json"
 
-        launch(
-            branch="feat",
-            name="stop-wt",
-            config=config,
-            state=state,
-            cwd=git_repo,
-            state_path=state_file,
-        )
+        try:
+            launch(
+                branch="feat",
+                name="stop-wt",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
         worktree_path = git_repo.parent / f"{git_repo.name}.wt" / "stop-wt"
         assert worktree_path.exists()
 
@@ -342,14 +366,17 @@ class TestDestroy:
         state = State()
         state_file = tmp_path / "state.json"
 
-        launch(
-            branch="feat",
-            name="stop-state",
-            config=config,
-            state=state,
-            cwd=git_repo,
-            state_path=state_file,
-        )
+        try:
+            launch(
+                branch="feat",
+                name="stop-state",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
         state2 = load_state(state_file)
         destroy("stop-state", state2, state_file)
 
@@ -368,14 +395,17 @@ class TestDestroy:
         state = State()
         state_file = tmp_path / "state.json"
 
-        launch(
-            branch="feat",
-            name="stale-stop",
-            config=config,
-            state=state,
-            cwd=git_repo,
-            state_path=state_file,
-        )
+        try:
+            launch(
+                branch="feat",
+                name="stale-stop",
+                config=config,
+                state=state,
+                cwd=git_repo,
+                state_path=state_file,
+            )
+        except TmuxError:
+            pass  # attachment/switch fails outside a real tmux client
         kill_session("stale-stop")
 
         state2 = load_state(state_file)
