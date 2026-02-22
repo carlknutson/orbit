@@ -30,23 +30,24 @@ class TestStart:
         state = State()
         state_file = tmp_path / "state.json"
 
-        orbit_name = None
         try:
             runner = CliRunner()
             with runner.isolated_filesystem():
-                launch(
-                    branch="feat",
-                    name="test-orbit",
-                    config=config,
-                    state=state,
-                    cwd=git_repo,
-                    state_path=state_file,
-                )
-            orbit_name = "test-orbit"
+                try:
+                    launch(
+                        branch="feat",
+                        name="test-orbit",
+                        config=config,
+                        state=state,
+                        cwd=git_repo,
+                        state_path=state_file,
+                    )
+                except TmuxError:
+                    pass  # attachment/switch fails outside a real tmux client
             assert session_exists("test-orbit")
         finally:
-            if orbit_name and session_exists(orbit_name):
-                kill_session(orbit_name)
+            if session_exists("test-orbit"):
+                kill_session("test-orbit")
 
     def test_records_orbit_in_state(self, git_repo, tmp_path):
         planet = make_planet(git_repo)
