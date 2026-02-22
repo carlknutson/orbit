@@ -167,10 +167,36 @@ def setup_panes(
         set_window_option(session, window, "pane-border-status", "top")
         set_window_option(session, window, "pane-border-format", " #{pane_title} ")
 
+    pane_base = _pane_base_index(session, window)
     for i, pane in enumerate(panes):
-        set_pane_title(f"{session}:{window}.{i}", pane.name)
+        idx = pane_base + i
+        set_pane_title(f"{session}:{window}.{idx}", pane.name)
         if pane.command is not None:
-            send_keys(f"{session}:{window}.{i}", pane.command)
+            send_keys(f"{session}:{window}.{idx}", pane.command)
+
+
+def _pane_base_index(session: str, window: str) -> int:
+    """Return the index of the first pane in a window."""
+    result = subprocess.run(
+        ["tmux", "list-panes", "-t", f"{session}:{window}", "-F", "#{pane_index}"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+    return int(result.stdout.strip().splitlines()[0])
+
+
+def first_window_index(session: str) -> int:
+    """Return the index of the first window in a session."""
+    result = subprocess.run(
+        ["tmux", "list-windows", "-t", session, "-F", "#{window_index}"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise TmuxError(result.stderr.strip())
+    return int(result.stdout.strip().splitlines()[0])
 
 
 def rename_window(session: str, index: int, name: str) -> None:
@@ -207,7 +233,9 @@ def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> N
     if not windows:
         return
 
-    rename_window(session, 0, windows[0].name)
+    base = first_window_index(session)
+
+    rename_window(session, base, windows[0].name)
     if windows[0].panes:
         setup_panes(session, windows[0].name, windows[0].panes, worktree_path)
     elif windows[0].command:
@@ -220,4 +248,4 @@ def setup_windows(session: str, windows: list[Window], worktree_path: Path) -> N
         elif window.command:
             send_keys(f"{session}:{window.name}", window.command)
 
-    select_window(session, 0)
+    select_window(session, base)

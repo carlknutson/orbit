@@ -4,6 +4,8 @@ from orbit.models import Pane, Window
 from orbit.tmux import (
     TmuxError,
     _layout_for,
+    _pane_base_index,
+    first_window_index,
     inside_tmux,
     kill_session,
     new_session,
@@ -95,7 +97,9 @@ class TestSendKeys:
         name = "orbit-test-keys"
         try:
             new_session(name, tmp_path)
-            send_keys(f"{name}:0.0", "echo hello")
+            win = str(first_window_index(name))
+            pane = _pane_base_index(name, win)
+            send_keys(f"{name}:{win}.{pane}", "echo hello")
         finally:
             kill_session(name)
 
@@ -110,7 +114,8 @@ class TestSplitWindow:
         name = "orbit-test-split"
         try:
             new_session(name, tmp_path)
-            split_window(name, "0", tmp_path)
+            win = str(first_window_index(name))
+            split_window(name, win, tmp_path)
             # success = no TmuxError raised
         finally:
             kill_session(name)
@@ -122,8 +127,9 @@ class TestSelectLayout:
         name = "orbit-test-layout"
         try:
             new_session(name, tmp_path)
-            split_window(name, "0", tmp_path)
-            select_layout(name, "0", "even-horizontal")
+            win = str(first_window_index(name))
+            split_window(name, win, tmp_path)
+            select_layout(name, win, "even-horizontal")
         finally:
             kill_session(name)
 
@@ -135,7 +141,8 @@ class TestSetupPanes:
         panes = [Pane(name="shell")]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, "0", panes, tmp_path)
+            win = str(first_window_index(name))
+            setup_panes(name, win, panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -147,7 +154,8 @@ class TestSetupPanes:
         ]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, "0", panes, tmp_path)
+            win = str(first_window_index(name))
+            setup_panes(name, win, panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -160,7 +168,8 @@ class TestSetupPanes:
         ]
         try:
             new_session(name, tmp_path)
-            setup_panes(name, "0", panes, tmp_path)
+            win = str(first_window_index(name))
+            setup_panes(name, win, panes, tmp_path)
         finally:
             kill_session(name)
 
@@ -168,7 +177,8 @@ class TestSetupPanes:
         name = "orbit-test-panes-empty"
         try:
             new_session(name, tmp_path)
-            setup_panes(name, "0", [], tmp_path)
+            win = str(first_window_index(name))
+            setup_panes(name, win, [], tmp_path)
         finally:
             kill_session(name)
 
