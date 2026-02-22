@@ -87,7 +87,7 @@ class TestStart:
                 cwd=git_repo,
                 state_path=state_file,
             )
-            assert (git_repo.parent / "test-wt").exists()
+            assert (git_repo.parent / f"{git_repo.name}.wt" / "test-wt").exists()
         finally:
             if session_exists("test-wt"):
                 kill_session("test-wt")
@@ -107,7 +107,8 @@ class TestStart:
                 cwd=git_repo,
                 state_path=state_file,
             )
-            gitignore = git_repo.parent / "test-gi" / ".gitignore"
+            wt_dir = git_repo.parent / f"{git_repo.name}.wt" / "test-gi"
+            gitignore = wt_dir / ".gitignore"
             assert ".orbit/" in gitignore.read_text().splitlines()
         finally:
             if session_exists("test-gi"):
@@ -191,7 +192,7 @@ class TestStart:
                 cwd=git_repo,
                 state_path=state_file,
             )
-            dst = git_repo.parent / "test-sync" / ".env"
+            dst = git_repo.parent / f"{git_repo.name}.wt" / "test-sync" / ".env"
             assert dst.is_symlink()
             assert dst.resolve() == (git_repo / ".env").resolve()
         finally:
@@ -205,7 +206,7 @@ class TestStart:
             name="stale-orbit",
             planet=git_repo.name,
             branch="main",
-            worktree=str(git_repo.parent / "stale-orbit"),
+            worktree=str(git_repo.parent / f"{git_repo.name}.wt" / "stale-orbit"),
             tmux_session="stale-orbit",
         )
         state = State()
@@ -287,7 +288,7 @@ class TestStart:
             if session_exists("test-base-branch"):
                 kill_session("test-base-branch")
 
-        wt_path = git_repo.parent / "test-base-branch"
+        wt_path = git_repo.parent / f"{git_repo.name}.wt" / "test-base-branch"
         assert (wt_path / "base-file.txt").exists()
 
 
@@ -327,7 +328,7 @@ class TestDestroy:
             cwd=git_repo,
             state_path=state_file,
         )
-        worktree_path = git_repo.parent / "stop-wt"
+        worktree_path = git_repo.parent / f"{git_repo.name}.wt" / "stop-wt"
         assert worktree_path.exists()
 
         state2 = load_state(state_file)

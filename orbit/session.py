@@ -53,7 +53,8 @@ def launch(
                 n += 1
             orbit_name = f"{branch_slug}-{n}"
 
-    worktree_base = Path(planet.path).expanduser().parent
+    planet_dir = Path(planet.path).expanduser()
+    worktree_base = planet_dir.parent / f"{planet_dir.name}.wt"
     worktree_path = worktree_base / orbit_name
     worktree_base.mkdir(parents=True, exist_ok=True)
 
