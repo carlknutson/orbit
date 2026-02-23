@@ -196,8 +196,11 @@ def sync_untracked_to_worktree(
         cwd=source_path,
         capture_output=True,
         text=True,
-        check=True,
     )
+    if result.returncode != 0:
+        raise WorktreeError(
+            f"Failed to list tracked files in {source_path}: {result.stderr.strip()}"
+        )
     tracked = set(result.stdout.splitlines())
 
     synced: list[str] = []

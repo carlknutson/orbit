@@ -96,6 +96,7 @@ def launch(
 
     for key, value in planet.env.items():
         tmux.set_environment(orbit_name, key, value)
+    tmux.set_environment(orbit_name, "CLAUDE_CODE_TASK_LIST_ID", orbit_name)
 
     tmux.setup_windows(orbit_name, planet.windows, worktree_path)
 

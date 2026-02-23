@@ -265,6 +265,40 @@ class TestStart:
         captured = capsys.readouterr()
         assert "uncommitted changes" in captured.out
 
+    def test_sets_claude_code_task_list_id(self, git_repo, tmp_path):
+        planet = make_planet(git_repo)
+        config = make_config(planet)
+        state = State()
+        state_file = tmp_path / "state.json"
+
+        try:
+            try:
+                launch(
+                    branch="feat",
+                    name="test-taskid",
+                    config=config,
+                    state=state,
+                    cwd=git_repo,
+                    state_path=state_file,
+                )
+            except TmuxError:
+                pass  # attachment/switch fails outside a real tmux client
+            result = subprocess.run(
+                [
+                    "tmux",
+                    "show-environment",
+                    "-t",
+                    "test-taskid",
+                    "CLAUDE_CODE_TASK_LIST_ID",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            assert result.stdout.strip() == "CLAUDE_CODE_TASK_LIST_ID=test-taskid"
+        finally:
+            if session_exists("test-taskid"):
+                kill_session("test-taskid")
+
     def test_new_branch_branched_from_explicit_base(self, git_repo, tmp_path):
         subprocess.run(
             ["git", "checkout", "-b", "base-branch"],
