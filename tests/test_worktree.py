@@ -336,6 +336,49 @@ class TestDetectDefaultBranch:
         result = detect_default_branch(git_repo, "origin")
         assert result == "dev"
 
+    def test_detect_default_branch_prefers_remote_over_stale_symref(
+        self, git_repo, tmp_path
+    ):
+        # Remote's default is 'dev', but local symref still points to 'main'.
+        subprocess.run(
+            ["git", "checkout", "-b", "dev"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        bare = tmp_path / "bare"
+        subprocess.run(
+            ["git", "clone", "--bare", str(git_repo), str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "checkout", "-"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(bare)],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        # Simulate stale local symref pointing to the old default.
+        subprocess.run(
+            [
+                "git",
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+            ],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        result = detect_default_branch(git_repo, "origin")
+        assert result == "dev"
+
 
 class TestEnsureGitignoreHasOrbit:
     def test_creates_gitignore_when_missing(self, tmp_path):

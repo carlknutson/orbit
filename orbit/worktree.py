@@ -78,18 +78,7 @@ def branch_exists_locally(repo_path: Path, branch: str) -> bool:
 
 
 def detect_default_branch(repo_path: Path, remote: str) -> str | None:
-    result = subprocess.run(
-        ["git", "symbolic-ref", f"refs/remotes/{remote}/HEAD"],
-        cwd=repo_path,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode == 0:
-        ref = result.stdout.strip()
-        prefix = f"refs/remotes/{remote}/"
-        if ref.startswith(prefix):
-            return ref[len(prefix) :]
-
+    # Ask the remote directly — authoritative, not affected by stale local state.
     result = subprocess.run(
         ["git", "ls-remote", "--symref", remote, "HEAD"],
         cwd=repo_path,
@@ -102,6 +91,19 @@ def detect_default_branch(repo_path: Path, remote: str) -> str | None:
         for line in result.stdout.splitlines():
             if line.startswith(heads_prefix) and line.endswith(heads_suffix):
                 return line[len(heads_prefix) : -len(heads_suffix)]
+
+    # Fall back to the locally cached symref (set during clone/fetch).
+    result = subprocess.run(
+        ["git", "symbolic-ref", f"refs/remotes/{remote}/HEAD"],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        ref = result.stdout.strip()
+        prefix = f"refs/remotes/{remote}/"
+        if ref.startswith(prefix):
+            return ref[len(prefix) :]
 
     for candidate in ("main", "master", "develop"):
         if branch_exists_locally(repo_path, candidate):
