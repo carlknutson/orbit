@@ -306,6 +306,36 @@ class TestDetectDefaultBranch:
         result = detect_default_branch(git_repo, "origin")
         assert result is None
 
+    def test_detect_default_branch_queries_remote_when_no_symref(
+        self, git_repo, tmp_path
+    ):
+        subprocess.run(
+            ["git", "checkout", "-b", "dev"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        bare = tmp_path / "bare"
+        subprocess.run(
+            ["git", "clone", "--bare", str(git_repo), str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "checkout", "-"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(bare)],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        result = detect_default_branch(git_repo, "origin")
+        assert result == "dev"
+
 
 class TestEnsureGitignoreHasOrbit:
     def test_creates_gitignore_when_missing(self, tmp_path):
