@@ -273,6 +273,18 @@ class TestSyncUntrackedToWorktree:
         assert (worktree_path / ".env").is_symlink()
         assert (worktree_path / ".env.local").is_symlink()
 
+    def test_syncs_nested_dotfile(self, git_repo, tmp_path):
+        pkg_dir = git_repo / "packages" / "api"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / ".env").write_text("DB=postgres\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".*"])
+        assert "packages/api/.env" in synced
+        dst = worktree_path / "packages" / "api" / ".env"
+        assert dst.is_symlink()
+        assert dst.resolve() == (pkg_dir / ".env").resolve()
+
 
 class TestDetectDefaultBranch:
     def test_detect_default_branch_via_symbolic_ref(self, git_repo):

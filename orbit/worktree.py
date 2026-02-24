@@ -1,3 +1,4 @@
+import fnmatch
 import re
 import subprocess
 from pathlib import Path
@@ -203,34 +204,49 @@ def sync_untracked_to_worktree(
 ) -> list[str]:
     """Sync untracked files matching patterns from source into worktree.
 
-    Dotfiles (name starts with '.') are symlinked for live-shared state.
-    All other paths (e.g. node_modules) are copied for isolation.
-    Git-tracked files are skipped — they're already in the worktree.
+    Uses git to enumerate untracked, non-ignored files (respecting .gitignore),
+    then symlinks any whose basename matches one of the given fnmatch patterns.
+    Matching on the basename means '.*' catches dotfiles at any depth.
+
+    For each file, ancestors are checked first so that a pattern like
+    'node_modules' symlinks the whole directory rather than individual files.
     """
     result = subprocess.run(
-        ["git", "ls-files"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
         cwd=source_path,
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
         raise WorktreeError(
-            f"Failed to list tracked files in {source_path}: {result.stderr.strip()}"
+            f"Failed to list untracked files in {source_path}: {result.stderr.strip()}"
         )
-    tracked = set(result.stdout.splitlines())
 
+    already_synced: set[Path] = set()
     synced: list[str] = []
-    for pattern in patterns:
-        for src in source_path.glob(pattern):
-            rel = src.relative_to(source_path)
-            if str(rel) in tracked:
-                continue
-            dst = worktree_path / rel
-            if dst.exists() or dst.is_symlink():
-                continue
-            if src.name == ".git":
-                continue
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.symlink_to(src.resolve())
-            synced.append(str(rel))
+
+    for entry in result.stdout.splitlines():
+        file_rel = Path(entry)
+
+        # Check ancestors first (shallowest match wins), then the file itself.
+        matched: Path | None = None
+        parts = file_rel.parts
+        candidates = [Path(*parts[: i + 1]) for i in range(len(parts))]
+        for candidate in candidates:
+            if any(fnmatch.fnmatch(candidate.name, pattern) for pattern in patterns):
+                matched = candidate
+                break
+
+        if matched is None or matched in already_synced:
+            continue
+
+        already_synced.add(matched)
+        src = source_path / matched
+        dst = worktree_path / matched
+        if dst.exists() or dst.is_symlink():
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.symlink_to(src.resolve())
+        synced.append(str(matched))
+
     return synced
