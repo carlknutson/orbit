@@ -204,15 +204,16 @@ def sync_untracked_to_worktree(
 ) -> list[str]:
     """Sync untracked files matching patterns from source into worktree.
 
-    Uses git to enumerate untracked, non-ignored files (respecting .gitignore),
-    then symlinks any whose basename matches one of the given fnmatch patterns.
-    Matching on the basename means '.*' catches dotfiles at any depth.
+    Uses git to enumerate all untracked files (including ignored ones like
+    .env), then symlinks any whose basename matches one of the given fnmatch
+    patterns.  Matching on the basename means '.*' catches dotfiles at any
+    depth.
 
     For each file, ancestors are checked first so that a pattern like
     'node_modules' symlinks the whole directory rather than individual files.
     """
     result = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard"],
+        ["git", "ls-files", "--others"],
         cwd=source_path,
         capture_output=True,
         text=True,

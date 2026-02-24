@@ -273,6 +273,54 @@ class TestSyncUntrackedToWorktree:
         assert (worktree_path / ".env").is_symlink()
         assert (worktree_path / ".env.local").is_symlink()
 
+    def test_syncs_gitignored_dotfile(self, git_repo, tmp_path):
+        (git_repo / ".gitignore").write_text(".env\n")
+        subprocess.run(
+            ["git", "add", ".gitignore"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "add gitignore"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        (git_repo / ".env").write_text("SECRET=123\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".env"])
+        assert synced == [".env"]
+        dst = worktree_path / ".env"
+        assert dst.is_symlink()
+        assert dst.resolve() == (git_repo / ".env").resolve()
+
+    def test_ignores_node_modules_with_dotfile_pattern(self, git_repo, tmp_path):
+        (git_repo / ".gitignore").write_text("node_modules/\n.env\n")
+        subprocess.run(
+            ["git", "add", ".gitignore"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "add gitignore"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        node_modules = git_repo / "node_modules"
+        node_modules.mkdir()
+        (node_modules / "pkg.js").write_text("module.exports = {}\n")
+        (git_repo / ".env").write_text("SECRET=123\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".*"])
+        assert ".env" in synced
+        assert "node_modules" not in synced
+        assert not (worktree_path / "node_modules").exists()
+
     def test_syncs_nested_dotfile(self, git_repo, tmp_path):
         pkg_dir = git_repo / "packages" / "api"
         pkg_dir.mkdir(parents=True)
