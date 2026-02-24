@@ -262,22 +262,21 @@ def sync_untracked_to_worktree(
     source_path: Path,
     worktree_path: Path,
     patterns: list[str],
-    dirs: list[str] | None = None,
 ) -> list[str]:
     """Sync untracked files matching patterns from source into worktree.
 
     Uses git to enumerate all untracked files (including ignored ones like
-    .env), then symlinks any whose basename matches one of the given fnmatch
-    patterns.  Matching on the basename means '.*' catches dotfiles at any
-    depth.
+    .env), then symlinks any that match one of the given fnmatch patterns.
 
-    For each file, ancestors are checked first so that a pattern like
-    'node_modules' symlinks the whole directory rather than individual files.
+    Patterns are path-aware:
+    - A pattern without ``/`` (e.g. ``.*``, ``.env``) matches only names at
+      the repo root, preventing dotfiles inside ``node_modules`` etc. from
+      being inadvertently synced.
+    - A pattern with ``/`` (e.g. ``packages/api/.env``) is matched against
+      the full relative path, allowing explicit opt-in for nested files.
 
-    When ``dirs`` is given, only candidates whose immediate parent directory
-    is listed in ``dirs`` are considered.  Pass ``dirs=["."]`` to restrict
-    syncing to the repo root, which prevents dotfiles nested inside
-    directories like ``node_modules`` from being inadvertently synced.
+    For each entry, ancestors are checked first so that a pattern like
+    ``node_modules`` symlinks the whole directory rather than individual files.
     """
     result = subprocess.run(
         ["git", "ls-files", "--others"],
@@ -290,7 +289,8 @@ def sync_untracked_to_worktree(
             f"Failed to list untracked files in {source_path}: {result.stderr.strip()}"
         )
 
-    _dirs = {Path(d) for d in dirs} if dirs is not None else None
+    root_patterns = [p for p in patterns if "/" not in p]
+    path_patterns = [p for p in patterns if "/" in p]
     already_synced: set[Path] = set()
     synced: list[str] = []
 
@@ -302,9 +302,14 @@ def sync_untracked_to_worktree(
         parts = file_rel.parts
         candidates = [Path(*parts[: i + 1]) for i in range(len(parts))]
         for candidate in candidates:
-            if _dirs is not None and candidate.parent not in _dirs:
-                continue
-            if any(fnmatch.fnmatch(candidate.name, pattern) for pattern in patterns):
+            # Name patterns: only match entries directly under the repo root.
+            if candidate.parent == Path(".") and any(
+                fnmatch.fnmatch(candidate.name, p) for p in root_patterns
+            ):
+                matched = candidate
+                break
+            # Path patterns: match against the full relative path.
+            if any(fnmatch.fnmatch(str(candidate), p) for p in path_patterns):
                 matched = candidate
                 break
 

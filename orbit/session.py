@@ -80,15 +80,11 @@ def launch(
     patterns = planet.sync_untracked
     if patterns is None:
         patterns = [".*"]
-    dirs = planet.sync_untracked_dirs
-    if dirs is None:
-        dirs = ["."]
     if patterns:
         synced = worktree.sync_untracked_to_worktree(
             Path(planet.path).expanduser(),
             worktree_path,
             patterns,
-            dirs=dirs,
         )
         if synced:
             click.echo(f"Synced {len(synced)} untracked path(s) into worktree")
