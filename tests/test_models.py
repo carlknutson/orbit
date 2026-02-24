@@ -50,6 +50,18 @@ class TestPlanet:
         planet = Planet(name="My App", path="~/projects/myapp", sync_untracked=[".env"])
         assert planet.sync_untracked == [".env"]
 
+    def test_sync_untracked_dirs_defaults_to_none(self) -> None:
+        planet = Planet(name="My App", path="~/projects/myapp")
+        assert planet.sync_untracked_dirs is None
+
+    def test_sync_untracked_dirs_accepts_list(self) -> None:
+        planet = Planet(
+            name="My App",
+            path="~/projects/myapp",
+            sync_untracked_dirs=[".", "packages/api"],
+        )
+        assert planet.sync_untracked_dirs == [".", "packages/api"]
+
 
 class TestOrbit:
     def test_defaults(self) -> None:

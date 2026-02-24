@@ -262,6 +262,7 @@ def sync_untracked_to_worktree(
     source_path: Path,
     worktree_path: Path,
     patterns: list[str],
+    dirs: list[str] | None = None,
 ) -> list[str]:
     """Sync untracked files matching patterns from source into worktree.
 
@@ -272,6 +273,11 @@ def sync_untracked_to_worktree(
 
     For each file, ancestors are checked first so that a pattern like
     'node_modules' symlinks the whole directory rather than individual files.
+
+    When ``dirs`` is given, only candidates whose immediate parent directory
+    is listed in ``dirs`` are considered.  Pass ``dirs=["."]`` to restrict
+    syncing to the repo root, which prevents dotfiles nested inside
+    directories like ``node_modules`` from being inadvertently synced.
     """
     result = subprocess.run(
         ["git", "ls-files", "--others"],
@@ -284,6 +290,7 @@ def sync_untracked_to_worktree(
             f"Failed to list untracked files in {source_path}: {result.stderr.strip()}"
         )
 
+    _dirs = {Path(d) for d in dirs} if dirs is not None else None
     already_synced: set[Path] = set()
     synced: list[str] = []
 
@@ -295,6 +302,8 @@ def sync_untracked_to_worktree(
         parts = file_rel.parts
         candidates = [Path(*parts[: i + 1]) for i in range(len(parts))]
         for candidate in candidates:
+            if _dirs is not None and candidate.parent not in _dirs:
+                continue
             if any(fnmatch.fnmatch(candidate.name, pattern) for pattern in patterns):
                 matched = candidate
                 break

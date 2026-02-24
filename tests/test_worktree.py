@@ -334,6 +334,44 @@ class TestSyncUntrackedToWorktree:
         assert dst.is_symlink()
         assert dst.resolve() == (pkg_dir / ".env").resolve()
 
+    def test_dirs_root_only_excludes_nested_dotfile(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("ROOT=1\n")
+        pkg_dir = git_repo / "packages" / "api"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / ".env").write_text("DB=postgres\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".*"], dirs=["."])
+        assert ".env" in synced
+        assert "packages/api/.env" not in synced
+        assert not (worktree_path / "packages").exists()
+
+    def test_dirs_allows_specified_subdir(self, git_repo, tmp_path):
+        (git_repo / ".env").write_text("ROOT=1\n")
+        pkg_dir = git_repo / "packages" / "api"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / ".env").write_text("DB=postgres\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(
+            git_repo, worktree_path, [".*"], dirs=[".", "packages/api"]
+        )
+        assert ".env" in synced
+        assert "packages/api/.env" in synced
+
+    def test_dirs_root_only_prevents_node_modules_dotfile(self, git_repo, tmp_path):
+        (git_repo / ".gitignore").write_text("node_modules/\n")
+        node_modules = git_repo / "node_modules"
+        node_modules.mkdir()
+        (node_modules / ".cache").mkdir()
+        (node_modules / ".cache" / "data.json").write_text("{}\n")
+        (git_repo / ".env").write_text("SECRET=123\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".*"], dirs=["."])
+        assert ".env" in synced
+        assert not (worktree_path / "node_modules").exists()
+
 
 @pytest.mark.integration
 class TestSyncLocalBranchWithRemote:

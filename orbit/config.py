@@ -55,6 +55,9 @@ planets:
   #   sync_untracked:        # optional: override which untracked files to symlink
   #     - .env             # by default all dotfiles are symlinked into the worktree
   #     - .env.local       # explicit list disables the default; only listed paths sync
+  #   sync_untracked_dirs:   # optional: directories to look for matching files in
+  #     - .                # by default only the repo root is searched (prevents
+  #     - packages/api     # dotfiles inside node_modules etc. from leaking in)
   #   windows:
   #     - name: server              # single-pane: just a command
   #       command: npm run dev

@@ -23,6 +23,7 @@ class Planet(BaseModel):
     env: dict[str, str] = Field(default_factory=dict)
     windows: list[Window] = Field(default_factory=list)
     sync_untracked: list[str] | None = None
+    sync_untracked_dirs: list[str] | None = None
 
     @property
     def slug(self) -> str:
