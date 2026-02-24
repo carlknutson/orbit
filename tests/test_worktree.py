@@ -13,6 +13,7 @@ from orbit.worktree import (
     has_uncommitted_changes,
     remove_worktree,
     slugify,
+    sync_local_branch_with_remote,
     sync_untracked_to_worktree,
 )
 
@@ -332,6 +333,161 @@ class TestSyncUntrackedToWorktree:
         dst = worktree_path / "packages" / "api" / ".env"
         assert dst.is_symlink()
         assert dst.resolve() == (pkg_dir / ".env").resolve()
+
+
+@pytest.mark.integration
+class TestSyncLocalBranchWithRemote:
+    def _make_commit(self, repo, message):
+        (repo / "file.txt").write_text(f"{message}\n")
+        subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+
+    def _setup_remote(self, git_repo, tmp_path):
+        bare = tmp_path / "bare"
+        subprocess.run(
+            ["git", "clone", "--bare", str(git_repo), str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(bare)],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        return bare
+
+    def test_returns_none_when_no_remote_branch(self, git_repo, tmp_path):
+        self._setup_remote(git_repo, tmp_path)
+        subprocess.run(
+            ["git", "branch", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        notice = sync_local_branch_with_remote(git_repo, "feat", "origin")
+        assert notice is None
+
+    def test_fast_forwards_when_behind(self, git_repo, tmp_path):
+        bare = self._setup_remote(git_repo, tmp_path)
+        subprocess.run(
+            ["git", "branch", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "push", "origin", "feat"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        # Advance remote feat via a temp clone.
+        tmp_clone = tmp_path / "tmp_clone"
+        subprocess.run(
+            ["git", "clone", str(bare), str(tmp_clone)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "checkout", "feat"],
+            cwd=tmp_clone,
+            check=True,
+            capture_output=True,
+        )
+        self._make_commit(tmp_clone, "remote-commit")
+        subprocess.run(
+            ["git", "push", "origin", "feat"],
+            cwd=tmp_clone,
+            check=True,
+            capture_output=True,
+        )
+
+        notice = sync_local_branch_with_remote(git_repo, "feat", "origin")
+
+        assert notice is not None
+        assert "Fast-forwarded" in notice
+        local_sha = subprocess.run(
+            ["git", "rev-parse", "feat"],
+            cwd=git_repo,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        remote_sha = subprocess.run(
+            ["git", "rev-parse", "origin/feat"],
+            cwd=git_repo,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        assert local_sha == remote_sha
+
+    def test_returns_none_when_ahead(self, git_repo, tmp_path):
+        self._setup_remote(git_repo, tmp_path)
+        subprocess.run(
+            ["git", "branch", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "push", "origin", "feat"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        # Add a local-only commit to feat.
+        subprocess.run(
+            ["git", "checkout", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        self._make_commit(git_repo, "local-only-commit")
+        subprocess.run(
+            ["git", "checkout", "-"], cwd=git_repo, check=True, capture_output=True
+        )
+
+        notice = sync_local_branch_with_remote(git_repo, "feat", "origin")
+
+        assert notice is None
+
+    def test_returns_warning_when_diverged(self, git_repo, tmp_path):
+        bare = self._setup_remote(git_repo, tmp_path)
+        subprocess.run(
+            ["git", "branch", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "push", "origin", "feat"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+        # Add a local commit to feat.
+        subprocess.run(
+            ["git", "checkout", "feat"], cwd=git_repo, check=True, capture_output=True
+        )
+        self._make_commit(git_repo, "local-commit")
+        subprocess.run(
+            ["git", "checkout", "-"], cwd=git_repo, check=True, capture_output=True
+        )
+        # Also advance remote feat via a temp clone (original tip, so it diverges).
+        tmp_clone = tmp_path / "tmp_clone"
+        subprocess.run(
+            ["git", "clone", str(bare), str(tmp_clone)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "checkout", "feat"],
+            cwd=tmp_clone,
+            check=True,
+            capture_output=True,
+        )
+        self._make_commit(tmp_clone, "remote-commit")
+        subprocess.run(
+            ["git", "push", "origin", "feat"],
+            cwd=tmp_clone,
+            check=True,
+            capture_output=True,
+        )
+
+        notice = sync_local_branch_with_remote(git_repo, "feat", "origin")
+
+        assert notice is not None
+        assert "diverged" in notice
 
 
 class TestDetectDefaultBranch:

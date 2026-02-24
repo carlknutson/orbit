@@ -73,7 +73,9 @@ def launch(
     if is_new_branch and base is not None:
         click.echo(f"Branching '{branch}' from '{base}'")
 
-    worktree.create_worktree(cwd, worktree_path, branch, remote, base=base)
+    notice = worktree.create_worktree(cwd, worktree_path, branch, remote, base=base)
+    if notice:
+        click.echo(notice)
 
     patterns = planet.sync_untracked
     if patterns is None:

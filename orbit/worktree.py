@@ -112,18 +112,77 @@ def detect_default_branch(repo_path: Path, remote: str) -> str | None:
     return None
 
 
+def sync_local_branch_with_remote(
+    repo_path: Path, branch: str, remote: str
+) -> str | None:
+    """Fetch remote branch and fast-forward local if behind.
+
+    Returns a notice if the branch was fast-forwarded or has diverged,
+    None if branches are equal, local is ahead, or remote branch doesn't exist.
+    """
+    if not remote_branch_exists(repo_path, remote, branch):
+        return None
+
+    fetch = subprocess.run(
+        ["git", "fetch", remote, branch],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    if fetch.returncode != 0:
+        raise WorktreeError(f"Failed to fetch branch: {fetch.stderr.strip()}")
+
+    result = subprocess.run(
+        [
+            "git",
+            "rev-list",
+            "--left-right",
+            "--count",
+            f"{branch}...{remote}/{branch}",
+        ],
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+
+    ahead_str, behind_str = result.stdout.strip().split()
+    ahead, behind = int(ahead_str), int(behind_str)
+
+    if ahead == 0 and behind == 0:
+        return None
+    elif ahead == 0:
+        ff = subprocess.run(
+            ["git", "branch", "-f", branch, f"{remote}/{branch}"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+        )
+        if ff.returncode != 0:
+            raise WorktreeError(f"Failed to fast-forward branch: {ff.stderr.strip()}")
+        return f"Fast-forwarded '{branch}' to match {remote}/{branch}"
+    elif behind == 0:
+        return None
+    else:
+        return f"Warning: '{branch}' has diverged from {remote}/{branch}; using local"
+
+
 def create_worktree(
     repo_path: Path,
     worktree_path: Path,
     branch: str,
     remote: str | None = None,
     base: str | None = None,
-) -> None:
+) -> str | None:
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
 
     local_exists = branch_exists_locally(repo_path, branch)
+    notice: str | None = None
 
     if local_exists:
+        if remote:
+            notice = sync_local_branch_with_remote(repo_path, branch, remote)
         cmd = ["git", "worktree", "add", str(worktree_path), branch]
     elif remote and remote_branch_exists(repo_path, remote, branch):
         fetch = subprocess.run(
@@ -159,6 +218,8 @@ def create_worktree(
                 f"Run 'orbit launch <new-branch>' to start on a different branch."
             )
         raise WorktreeError(f"Failed to create worktree: {stderr}")
+
+    return notice
 
 
 def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
