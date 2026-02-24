@@ -234,17 +234,3 @@ def sync_untracked_to_worktree(
             dst.symlink_to(src.resolve())
             synced.append(str(rel))
     return synced
-
-
-def ensure_gitignore_has_orbit(worktree_path: Path) -> None:
-    gitignore = worktree_path / ".gitignore"
-    entry = ".orbit/"
-    if gitignore.exists():
-        content = gitignore.read_text()
-        if entry in content.splitlines():
-            return
-        if not content.endswith("\n"):
-            content += "\n"
-        gitignore.write_text(content + entry + "\n")
-    else:
-        gitignore.write_text(entry + "\n")

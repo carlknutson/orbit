@@ -8,7 +8,6 @@ from orbit.worktree import (
     create_worktree,
     detect_branch,
     detect_default_branch,
-    ensure_gitignore_has_orbit,
     get_main_repo_path,
     get_remotes,
     has_uncommitted_changes,
@@ -378,27 +377,3 @@ class TestDetectDefaultBranch:
         )
         result = detect_default_branch(git_repo, "origin")
         assert result == "dev"
-
-
-class TestEnsureGitignoreHasOrbit:
-    def test_creates_gitignore_when_missing(self, tmp_path):
-        ensure_gitignore_has_orbit(tmp_path)
-        assert (tmp_path / ".gitignore").read_text() == ".orbit/\n"
-
-    def test_appends_to_existing_gitignore(self, tmp_path):
-        (tmp_path / ".gitignore").write_text("node_modules/\n")
-        ensure_gitignore_has_orbit(tmp_path)
-        content = (tmp_path / ".gitignore").read_text()
-        assert ".orbit/" in content
-        assert "node_modules/" in content
-
-    def test_idempotent_when_entry_present(self, tmp_path):
-        (tmp_path / ".gitignore").write_text(".orbit/\n")
-        ensure_gitignore_has_orbit(tmp_path)
-        assert (tmp_path / ".gitignore").read_text() == ".orbit/\n"
-
-    def test_adds_newline_before_entry_if_missing(self, tmp_path):
-        (tmp_path / ".gitignore").write_text("node_modules/")
-        ensure_gitignore_has_orbit(tmp_path)
-        content = (tmp_path / ".gitignore").read_text()
-        assert "node_modules/\n.orbit/\n" == content

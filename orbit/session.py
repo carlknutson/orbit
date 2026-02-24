@@ -74,7 +74,6 @@ def launch(
         click.echo(f"Branching '{branch}' from '{base}'")
 
     worktree.create_worktree(cwd, worktree_path, branch, remote, base=base)
-    worktree.ensure_gitignore_has_orbit(worktree_path)
 
     patterns = planet.sync_untracked
     if patterns is None:

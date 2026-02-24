@@ -99,31 +99,6 @@ class TestStart:
             if session_exists("test-wt"):
                 kill_session("test-wt")
 
-    def test_gitignore_has_orbit_entry(self, git_repo, tmp_path):
-        planet = make_planet(git_repo)
-        config = make_config(planet)
-        state = State()
-        state_file = tmp_path / "state.json"
-
-        try:
-            try:
-                launch(
-                    branch="feat",
-                    name="test-gi",
-                    config=config,
-                    state=state,
-                    cwd=git_repo,
-                    state_path=state_file,
-                )
-            except TmuxError:
-                pass  # attachment/switch fails outside a real tmux client
-            wt_dir = git_repo.parent / f"{git_repo.name}.wt" / "test-gi"
-            gitignore = wt_dir / ".gitignore"
-            assert ".orbit/" in gitignore.read_text().splitlines()
-        finally:
-            if session_exists("test-gi"):
-                kill_session("test-gi")
-
     def test_collision_with_live_session_raises(self, git_repo, tmp_path):
         planet = make_planet(git_repo)
         config = make_config(planet)
