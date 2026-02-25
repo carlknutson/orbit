@@ -361,6 +361,31 @@ class TestSyncUntrackedToWorktree:
         assert ".env" in synced
         assert not (worktree_path / "node_modules").exists()
 
+    def test_wildcard_does_not_sync_dot_directory(self, git_repo, tmp_path):
+        """Wildcard patterns like .* must not auto-symlink dot-directories."""
+        dot_store = git_repo / ".pnpm-store"
+        dot_store.mkdir()
+        (dot_store / "some-hash").mkdir()
+        (dot_store / "some-hash" / "pkg.js").write_text("module.exports = {}\n")
+        (git_repo / ".env").write_text("SECRET=123\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".*"])
+        assert ".env" in synced
+        assert ".pnpm-store" not in synced
+        assert not (worktree_path / ".pnpm-store").exists()
+
+    def test_exact_dot_directory_pattern_still_symlinks(self, git_repo, tmp_path):
+        """Exact name patterns (no wildcards) may still symlink dot-directories."""
+        dot_cache = git_repo / ".cache"
+        dot_cache.mkdir()
+        (dot_cache / "data.bin").write_text("cached\n")
+        worktree_path = tmp_path / "wt"
+        create_worktree(git_repo, worktree_path, "feat")
+        synced = sync_untracked_to_worktree(git_repo, worktree_path, [".cache"])
+        assert ".cache" in synced
+        assert (worktree_path / ".cache").is_symlink()
+
 
 @pytest.mark.integration
 class TestSyncLocalBranchWithRemote:

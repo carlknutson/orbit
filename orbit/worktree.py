@@ -294,30 +294,46 @@ def sync_untracked_to_worktree(
     already_synced: set[Path] = set()
     synced: list[str] = []
 
+    def _is_glob(pattern: str) -> bool:
+        return any(c in pattern for c in ("*", "?", "["))
+
     for entry in result.stdout.splitlines():
         file_rel = Path(entry)
 
         # Check ancestors first (shallowest match wins), then the file itself.
         matched: Path | None = None
+        matched_pattern: str | None = None
         parts = file_rel.parts
         candidates = [Path(*parts[: i + 1]) for i in range(len(parts))]
         for candidate in candidates:
             # Name patterns: only match entries directly under the repo root.
-            if candidate.parent == Path(".") and any(
-                fnmatch.fnmatch(candidate.name, p) for p in root_patterns
-            ):
-                matched = candidate
+            if candidate.parent == Path("."):
+                for p in root_patterns:
+                    if fnmatch.fnmatch(candidate.name, p):
+                        matched = candidate
+                        matched_pattern = p
+                        break
+            if matched is not None:
                 break
             # Path patterns: match against the full relative path.
-            if any(fnmatch.fnmatch(str(candidate), p) for p in path_patterns):
-                matched = candidate
+            for p in path_patterns:
+                if fnmatch.fnmatch(str(candidate), p):
+                    matched = candidate
+                    matched_pattern = p
+                    break
+            if matched is not None:
                 break
 
         if matched is None or matched in already_synced:
             continue
 
-        already_synced.add(matched)
         src = source_path / matched
+        # Wildcard patterns (e.g. ".*") must not auto-symlink directories.
+        # Only symlink a directory when the pattern is an exact name (explicit opt-in).
+        if src.is_dir() and matched_pattern is not None and _is_glob(matched_pattern):
+            continue
+
+        already_synced.add(matched)
         dst = worktree_path / matched
         if dst.exists() or dst.is_symlink():
             continue
